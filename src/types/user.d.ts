@@ -4,4 +4,5 @@ export interface User {
 	passwordHash: string;
 	avatarUrl?: string | null;
 	createdAt: string;
+	userId: string;
 }

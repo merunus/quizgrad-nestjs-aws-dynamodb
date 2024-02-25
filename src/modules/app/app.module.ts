@@ -4,7 +4,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { DynamodbModule } from "../dynamodb/dynamodb.module";
 import { UserModule } from "../user/user.module";
-import { S3storageModule } from "src/s3storage/s3storage.module";
+import { S3storageModule } from "src/modules/s3storage/s3storage.module";
 
 @Module({
 	imports: [

@@ -11,13 +11,20 @@ import {
 	UpdateCommandInput,
 	UpdateCommand,
 	DeleteCommand,
-	DeleteCommandInput
+	DeleteCommandInput,
+	GetCommandInput,
+	ScanCommandInput,
+	PutCommandInput,
+	QueryCommand,
+	QueryCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { throwHttpException } from "src/utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
 import { TDynamoDBKeys } from "src/types/dynamodb";
-import { S3storageService } from "src/s3storage/s3storage.service";
+import { S3storageService } from "src/modules/s3storage/s3storage.service";
 import { PutObjectCommandInput, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3_STORAGE_BASE_URL } from "src/constants/core.constants";
+import { GSIIndexes } from "../models/GSI-indexes";
 
 @Injectable()
 export class UserService {
@@ -27,20 +34,24 @@ export class UserService {
 	) {}
 
 	async handleCreateUser({ email, password, username }: CreateUserDto) {
-		const userId = uuid();
-		const newUser: User & TDynamoDBKeys = {
-			PK: `USER#${userId}`, // Partition key
-			SK: `#METADATA#${userId}`, // Sort key
-			createdAt: new Date().toISOString(),
-			email,
-			username,
-			passwordHash: await hashPassword(password)
-		};
-		const params = {
-			TableName: process.env.DYNAMODB_TABLE_NAME,
-			Item: newUser
-		};
+		const isUserWithEmailExist = await this.handleGetUserByEmail(email);
+		if (isUserWithEmailExist)
+			throwHttpException(RESPONSE_TYPES.CONFLICT, `User with email ${email} already exist`);
 		try {
+			const userId = uuid();
+			const newUser: User & TDynamoDBKeys = {
+				PK: `USER#${userId}`, // Partition key
+				SK: `#METADATA#${userId}`, // Sort key
+				createdAt: new Date().toISOString(),
+				email,
+				username,
+				passwordHash: await hashPassword(password),
+				userId
+			};
+			const params: PutCommandInput = {
+				TableName: process.env.DYNAMODB_TABLE_NAME,
+				Item: newUser
+			};
 			const dbClient = this.dynamodbService.getDynamoDbClient();
 			await dbClient.send(new PutCommand(params));
 			const { SK, PK, passwordHash, ...userReturn } = newUser;
@@ -54,38 +65,62 @@ export class UserService {
 	async handleGetAllUsers() {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
-			const params = {
+			const params: ScanCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				FilterExpression: "begins_with(PK, :pkval)", // Get the users by the PK field which starts with USER
 				ExpressionAttributeValues: {
 					":pkval": "USER#"
-				}
+				},
+				ProjectionExpression: "email, username, createdAt"
 			};
 			const command = new ScanCommand(params);
 			const { Items } = await dbClient.send(command);
 			return Items;
 		} catch (error) {
 			console.error("DynamoDB Error:", error); // Log the actual error message
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create user");
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to get all users");
 		}
 	}
 
 	async handleGetUserById(userId: string) {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
-			const params = {
+			const params: GetCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Key: {
 					PK: `USER#${userId}`,
 					SK: `#METADATA#${userId}`
-				}
+				},
+				ProjectionExpression: "email, username, createdAt"
 			};
 			const command = new GetCommand(params);
 			const { Item } = await dbClient.send(command);
+			if (!Item) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
 			return Item;
 		} catch (error) {
-			console.error("DynamoDB Error:", error); // Log the actual error message
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create user");
+			if (error?.response) throw error;
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to find user");
+		}
+	}
+
+	async handleGetUserByEmail(userEmail: string) {
+		try {
+			const dbClient = this.dynamodbService.getDynamoDbClient();
+			const params: QueryCommandInput = {
+				TableName: process.env.DYNAMODB_TABLE_NAME,
+				IndexName: GSIIndexes.UsersByEmail,
+				KeyConditionExpression: "email = :userEmail",
+				ExpressionAttributeValues: {
+					":userEmail": userEmail
+				},
+				ProjectionExpression: "email, username, createdAt"
+			};
+			const command = new QueryCommand(params);
+			const { Items } = await dbClient.send(command);
+			return Items[0];
+		} catch (error) {
+			if (error?.response) throw error;
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to find with email ${userEmail}`);
 		}
 	}
 
@@ -117,6 +152,7 @@ export class UserService {
 		if (!userId) throwHttpException(RESPONSE_TYPES.BAD_REQUEST, "User id must be provided");
 		if (!file) throwHttpException(RESPONSE_TYPES.BAD_REQUEST, "User avatar must be provided");
 
+		// Check if user with passed id exist
 		const targetUser = await this.handleGetUserById(userId);
 		if (!targetUser)
 			throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
@@ -138,7 +174,7 @@ export class UserService {
 			await s3Client.send(saveAvatarCommand);
 
 			// Construct the URL of the uploaded avatar
-			const avatarUrl = `https://${process.env.S3_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+			const avatarUrl = `${S3_STORAGE_BASE_URL}/${fileKey}`;
 
 			await this.handleUpdateUserAvatarProperty(userId, avatarUrl);
 
@@ -161,37 +197,9 @@ export class UserService {
 			const command = new DeleteCommand(params);
 			const dynamoDbClient = this.dynamodbService.getDynamoDbClient();
 			await dynamoDbClient.send(command);
-			return `User was successfully delete`
+			throwHttpException(RESPONSE_TYPES.OK, "User was successfully deleted");
 		} catch (error) {
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete user");
 		}
 	}
 }
-
-// How to get access to the uploaded images
-// Enabling Public Read Access for Avatar Images in S3 Bucket
-
-// 1. Set Object ACL to 'public-read' on Upload:
-// - When uploading an avatar image to S3, include the ACL setting in the upload parameters to make the object publicly readable.
-// - Example: ACL: 'public-read'
-
-// 2. Update S3 Bucket Policy for Public Access:
-// - Navigate to the S3 bucket in the AWS Management Console.
-// - Go to the Permissions tab and click on Bucket Policy.
-// - Add the following policy, replacing 'quizgrad-images' with your bucket name, to allow public read access to objects under 'avatars/':
-
-// {
-//   "Version": "2012-10-17",
-//   "Statement": [{
-//     "Sid": "PublicReadForAvatars",
-//     "Effect": "Allow",
-//     "Principal": "*",
-//     "Action": "s3:GetObject",
-//     "Resource": "arn:aws:s3:::quizgrad-images/avatars/*"
-//   }]
-// }
-
-// 3. Enable Object Ownership with ACLs:
-// - Still in the S3 bucket settings, find the Object Ownership section under the Permissions tab.
-// - Choose "ACLs enabled" to allow ACLs to manage permissions.
-// - This step ensures that the 'public-read' ACL and bucket policy effectively grant the intended public access to your avatar images.
