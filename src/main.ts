@@ -8,7 +8,7 @@ import { formatValidationErrors } from "./utils/formatValidationErrors";
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 	app.enableCors({
-		origin: "http://localhost:3000",
+		origin: `http://localhost:${process.env.PORT}`,
 		credentials: true
 	});
 	app.useGlobalPipes(
@@ -22,6 +22,6 @@ async function bootstrap() {
 			forbidNonWhitelisted: true // return error when non-defined properties added to the request body,
 		})
 	);
-	await app.listen(3000);
+	await app.listen(process.env.PORT);
 }
 bootstrap();

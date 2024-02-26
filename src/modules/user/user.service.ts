@@ -1,7 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { CreateUserDto } from "src/dto/create-user-dto";
-import { User } from "src/types/user";
 import { hashPassword } from "src/utils/hashPassword";
 import { v4 as uuid } from "uuid";
 import {
@@ -25,17 +24,22 @@ import { S3storageService } from "src/modules/s3storage/s3storage.service";
 import { PutObjectCommandInput, PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_STORAGE_BASE_URL } from "src/constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";
+import { TokenService } from "../token/token.service";
 
 @Injectable()
 export class UserService {
+	// Attributes of the user item return
+	private userProjectionExpression: string = "email, username, createdAt, userId";
+
 	constructor(
 		private readonly dynamodbService: DynamodbService,
-		private readonly s3storageService: S3storageService
+		private readonly s3storageService: S3storageService,
+		private tokenService: TokenService
 	) {}
 
 	async handleCreateUser({ email, password, username }: CreateUserDto) {
-		const isUserWithEmailExist = await this.handleGetUserByEmail(email);
-		if (isUserWithEmailExist)
+		const isUserExist = await this.handleGetUserByEmail(email);
+		if (isUserExist)
 			throwHttpException(RESPONSE_TYPES.CONFLICT, `User with email ${email} already exist`);
 		try {
 			const userId = uuid();
@@ -52,10 +56,22 @@ export class UserService {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Item: newUser
 			};
+			// Exclude redundant properties from user return
+			const { SK, PK, passwordHash, ...userPayload } = newUser;
+
+			// Generate tokens
+			const accessToken = this.tokenService.generateAccessToken(userPayload);
+			const refreshToken = this.tokenService.generateRefreshToken(userPayload);
+
 			const dbClient = this.dynamodbService.getDynamoDbClient();
+			// Save user to database
 			await dbClient.send(new PutCommand(params));
-			const { SK, PK, passwordHash, ...userReturn } = newUser;
-			return userReturn;
+
+			return {
+				user: userPayload,
+				accessToken,
+				refreshToken
+			};
 		} catch (error) {
 			console.error("DynamoDB Error:", error); // Log the actual error message
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create user");
@@ -71,7 +87,7 @@ export class UserService {
 				ExpressionAttributeValues: {
 					":pkval": "USER#"
 				},
-				ProjectionExpression: "email, username, createdAt"
+				ProjectionExpression: this.userProjectionExpression
 			};
 			const command = new ScanCommand(params);
 			const { Items } = await dbClient.send(command);
@@ -91,7 +107,7 @@ export class UserService {
 					PK: `USER#${userId}`,
 					SK: `#METADATA#${userId}`
 				},
-				ProjectionExpression: "email, username, createdAt"
+				ProjectionExpression: this.userProjectionExpression
 			};
 			const command = new GetCommand(params);
 			const { Item } = await dbClient.send(command);
@@ -112,12 +128,11 @@ export class UserService {
 				KeyConditionExpression: "email = :userEmail",
 				ExpressionAttributeValues: {
 					":userEmail": userEmail
-				},
-				ProjectionExpression: "email, username, createdAt"
+				}
 			};
 			const command = new QueryCommand(params);
 			const { Items } = await dbClient.send(command);
-			return Items[0];
+			return Items[0] as User;
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to find with email ${userEmail}`);
@@ -180,12 +195,13 @@ export class UserService {
 
 			return avatarUrl;
 		} catch (error) {
+			if (error?.response) throw error;
 			console.log(error);
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to upload user avatar");
 		}
 	}
 
-	async handleDeleteUser(userId) {
+	async handleDeleteUser(userId: string) {
 		try {
 			const params: DeleteCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
@@ -197,8 +213,9 @@ export class UserService {
 			const command = new DeleteCommand(params);
 			const dynamoDbClient = this.dynamodbService.getDynamoDbClient();
 			await dynamoDbClient.send(command);
-			throwHttpException(RESPONSE_TYPES.OK, "User was successfully deleted");
+			return "User was successfully deleted";
 		} catch (error) {
+			console.log(error);
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete user");
 		}
 	}
