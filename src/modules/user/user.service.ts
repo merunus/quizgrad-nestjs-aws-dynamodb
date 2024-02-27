@@ -196,7 +196,6 @@ export class UserService {
 			return avatarUrl;
 		} catch (error) {
 			if (error?.response) throw error;
-			console.log(error);
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to upload user avatar");
 		}
 	}
@@ -215,7 +214,6 @@ export class UserService {
 			await dynamoDbClient.send(command);
 			return "User was successfully deleted";
 		} catch (error) {
-			console.log(error);
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete user");
 		}
 	}

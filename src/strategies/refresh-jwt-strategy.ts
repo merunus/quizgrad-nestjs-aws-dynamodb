@@ -7,9 +7,9 @@ import { EStrategies } from "src/modules/models/strategies";
 export class RefreshJWTStrategy extends PassportStrategy(Strategy, EStrategies.REFRESH_JWT) {
 	constructor() {
 		super({
-			jwtFromRequest: ExtractJwt.fromBodyField("refresh"),
+			jwtFromRequest: ExtractJwt.fromBodyField("refreshToken"),
 			ignoreExpiration: false,
-			secretOrKey: `${process.env.REFRESH_JWT_SECRET}`,
+			secretOrKey: `${process.env.REFRESH_JWT_SECRET}`
 		});
 	}
 

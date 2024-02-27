@@ -9,7 +9,7 @@ export class TokenController {
 
   @Post('refresh')
   @UseGuards(RefreshTokenGuard)
-  async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+  async refreshAccessToken(@Body() refreshTokenDto: RefreshTokenDto) {
     return this.tokenService.refreshToken(refreshTokenDto.refreshToken);
   }
 }
