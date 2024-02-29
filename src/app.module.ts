@@ -1,8 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
-import { DynamodbModule } from "../db/dynamodb.module";
+import { DynamodbModule } from "./modules/db/dynamodb.module";
 
 @Module({
 	imports: [
@@ -11,7 +9,7 @@ import { DynamodbModule } from "../db/dynamodb.module";
 			isGlobal: true
 		})
 	],
-	controllers: [AppController],
-	providers: [AppService]
+	controllers: [],
+	providers: []
 })
 export class AppModule {}
