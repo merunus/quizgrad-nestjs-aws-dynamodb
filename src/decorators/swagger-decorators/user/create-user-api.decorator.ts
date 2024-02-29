@@ -1,6 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiConflictResponse, ApiOkResponse } from "@nestjs/swagger";
-import { UserResponseDto } from "src/dto/user-response.dto";
+import { UserResponseDto } from "../../../dto/user-response.dto";
 
 export function ApiCreateUser() {
 	return applyDecorators(

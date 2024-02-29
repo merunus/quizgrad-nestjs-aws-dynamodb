@@ -7,7 +7,7 @@ import {
 	InternalServerErrorException,
 	HttpException
 } from "@nestjs/common";
-import { RESPONSE_TYPES } from "src/modules/models/responseTypes";
+import { RESPONSE_TYPES } from "../modules/models/responseTypes";
 
 export function throwHttpException(type: RESPONSE_TYPES, objectOrError?: any) {
 	switch (type) {

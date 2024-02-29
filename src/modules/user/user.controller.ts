@@ -1,12 +1,12 @@
 import { Body, Controller, Get, Post, Param, Delete, UseGuards } from "@nestjs/common";
-import { CreateUserDto } from "src/dto/create-user-dto";
+import { CreateUserDto } from "../../dto/create-user-dto";
 import { UserService } from "./user.service";
-import { JwtAuthGuard } from "src/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "../../guards/jwt-auth.guard";
 import { ApiTags } from "@nestjs/swagger";
-import { ApiGetUserById } from "src/decorators/swagger-decorators/user/get-user-by-id-api.decorator";
-import { ApiGetAllUsers } from "src/decorators/swagger-decorators/user/get-all-users-api.decorator";
-import { ApiCreateUser } from "src/decorators/swagger-decorators/user/create-user-api.decorator";
-import { ApiDeleteUser } from "src/decorators/swagger-decorators/user/delete-user-api.decorator";
+import { ApiGetUserById } from "../../decorators/swagger-decorators/user/get-user-by-id-api.decorator";
+import { ApiGetAllUsers } from "../../decorators/swagger-decorators/user/get-all-users-api.decorator";
+import { ApiCreateUser } from "../../decorators/swagger-decorators/user/create-user-api.decorator";
+import { ApiDeleteUser } from "../../decorators/swagger-decorators/user/delete-user-api.decorator";
 
 @ApiTags("user")
 @Controller("user")

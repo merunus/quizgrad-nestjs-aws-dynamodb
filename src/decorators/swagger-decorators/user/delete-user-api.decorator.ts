@@ -1,6 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiResponse } from "@nestjs/swagger";
-import { RESPONSE_TYPES } from "src/modules/models/responseTypes";
+import { RESPONSE_TYPES } from "../../../modules/models/responseTypes";
 
 export function ApiDeleteUser() {
 	return applyDecorators(

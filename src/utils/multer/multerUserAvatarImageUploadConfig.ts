@@ -1,5 +1,5 @@
 import * as multer from "multer";
-import { MULTER_FILE_SIZE_LIMIT, validImageFileFormatsRegex } from "src/constants/core.constants";
+import { MULTER_FILE_SIZE_LIMIT, validImageFileFormatsRegex } from "../../constants/core.constants";
 
 export const multerUserAvatarImageUploadConfig = {
 	storage: multer.memoryStorage(),

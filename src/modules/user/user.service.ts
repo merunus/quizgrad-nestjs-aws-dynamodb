@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
-import { CreateUserDto } from "src/dto/create-user-dto";
-import { hashPassword } from "src/utils/hashPassword";
+import { CreateUserDto } from "../../dto/create-user-dto";
+import { hashPassword } from "../../utils/hashPassword";
 import { v4 as uuid } from "uuid";
 import {
 	PutCommand,
@@ -17,12 +17,12 @@ import {
 	QueryCommand,
 	QueryCommandInput
 } from "@aws-sdk/lib-dynamodb";
-import { throwHttpException } from "src/utils/throwHttpException";
+import { throwHttpException } from "../../utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
-import { TDynamoDBKeys } from "src/types/dynamodb";
-import { S3storageService } from "src/modules/s3storage/s3storage.service";
+import { TDynamoDBKeys } from "../../types/dynamodb";
+import { S3storageService } from "../../modules/s3storage/s3storage.service";
 import { PutObjectCommandInput, PutObjectCommand } from "@aws-sdk/client-s3";
-import { S3_STORAGE_BASE_URL } from "src/constants/core.constants";
+import { S3_STORAGE_BASE_URL } from "../../constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";
 import { TokenService } from "../token/token.service";
 

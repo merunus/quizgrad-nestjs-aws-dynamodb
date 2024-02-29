@@ -3,7 +3,7 @@ import { TokenService } from "./token.service";
 import { JwtModule } from "@nestjs/jwt";
 import { config } from "dotenv";
 import { TokenController } from "./token.controller";
-import { RefreshJWTStrategy } from "src/strategies/refresh-jwt-strategy";
+import { RefreshJWTStrategy } from "../../strategies/refresh-jwt-strategy";
 import { PassportModule } from "@nestjs/passport";
 config();
 

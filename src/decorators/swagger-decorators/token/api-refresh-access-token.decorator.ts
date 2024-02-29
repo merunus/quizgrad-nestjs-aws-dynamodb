@@ -1,7 +1,7 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiOperation, ApiBody, ApiResponse } from "@nestjs/swagger";
-import { RefreshTokenDto } from "src/dto/refresh-token.dto";
-import { RESPONSE_TYPES } from "src/modules/models/responseTypes";
+import { RefreshTokenDto } from "../../../dto/refresh-token.dto";
+import { RESPONSE_TYPES } from "../../../modules/models/responseTypes";
 
 export function ApiRefreshAccessToken() {
 	return applyDecorators(

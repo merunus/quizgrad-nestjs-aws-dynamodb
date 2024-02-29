@@ -1,7 +1,7 @@
 import * as bcrypt from "bcryptjs";
 import { Injectable } from "@nestjs/common";
 import { UserService } from "../user/user.service";
-import { throwHttpException } from "src/utils/throwHttpException";
+import { throwHttpException } from "../../utils/throwHttpException";
 import { TokenService } from "../token/token.service";
 import { RESPONSE_TYPES } from "../models/responseTypes";
 

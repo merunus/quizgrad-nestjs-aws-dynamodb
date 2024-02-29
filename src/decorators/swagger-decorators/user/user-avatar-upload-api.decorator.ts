@@ -1,6 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiOperation, ApiConsumes, ApiBody, ApiResponse } from "@nestjs/swagger";
-import { RESPONSE_TYPES } from "src/modules/models/responseTypes";
+import { RESPONSE_TYPES } from "../../../modules/models/responseTypes";
 
 export function ApiUserAvatarUpload() {
 	return applyDecorators(

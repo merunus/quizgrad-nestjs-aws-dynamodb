@@ -1,6 +1,6 @@
 import { applyDecorators } from "@nestjs/common";
 import { ApiNotFoundResponse, ApiOkResponse } from "@nestjs/swagger";
-import { UserDto } from "src/dto/user-dto";
+import { UserDto } from "../../../dto/user-dto";
 
 export function ApiGetUserById() {
 	return applyDecorators(

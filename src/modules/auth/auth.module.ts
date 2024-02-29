@@ -5,7 +5,7 @@ import { PassportModule } from "@nestjs/passport";
 import { UserModule } from "../user/user.module";
 import { TokenModule } from "../token/token.module";
 import { JwtModule } from "@nestjs/jwt";
-import { JwtStrategy } from "src/strategies/jwt.strategy";
+import { JwtStrategy } from "../../strategies/jwt.strategy";
 
 @Module({
 	imports: [UserModule, PassportModule, TokenModule],

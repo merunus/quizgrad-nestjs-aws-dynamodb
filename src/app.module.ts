@@ -1,6 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { S3storageModule } from "src/modules/s3storage/s3storage.module";
+import { S3storageModule } from "./modules/s3storage/s3storage.module";
 import { DynamodbModule } from "./modules/dynamodb/dynamodb.module";
 import { UserModule } from "./modules/user/user.module";
 import { AuthModule } from "./modules/auth/auth.module";
