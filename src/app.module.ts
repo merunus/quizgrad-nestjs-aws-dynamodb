@@ -1,12 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { AppController } from "./app.controller";
-import { AppService } from "./app.service";
-import { DynamodbModule } from "../dynamodb/dynamodb.module";
-import { UserModule } from "../user/user.module";
 import { S3storageModule } from "src/modules/s3storage/s3storage.module";
-import { AuthModule } from "../auth/auth.module";
-import { TokenModule } from "../token/token.module";
+import { DynamodbModule } from "./modules/dynamodb/dynamodb.module";
+import { UserModule } from "./modules/user/user.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { TokenModule } from "./modules/token/token.module";
 
 @Module({
 	imports: [
@@ -20,7 +18,7 @@ import { TokenModule } from "../token/token.module";
 			envFilePath: ".env"
 		})
 	],
-	controllers: [AppController],
-	providers: [AppService]
+	controllers: [],
+	providers: []
 })
 export class AppModule {}

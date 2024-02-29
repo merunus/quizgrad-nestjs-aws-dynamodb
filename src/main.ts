@@ -1,5 +1,5 @@
 import { NestFactory } from "@nestjs/core";
-import { AppModule } from "./modules/app/app.module";
+import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 import { throwHttpException } from "./utils/throwHttpException";
 import { RESPONSE_TYPES } from "./modules/models/responseTypes";
@@ -7,10 +7,11 @@ import { formatValidationErrors } from "./utils/formatValidationErrors";
 import { SwaggerModule } from "@nestjs/swagger";
 import { swaggerConfig } from "./swagger/swaggerConfig";
 
+
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 	app.enableCors({
-		origin: `http://localhost:${process.env.PORT}`,
+		origin: process.env.VERCEL_ORIGIN_URL,
 		credentials: true
 	});
 	app.useGlobalPipes(
