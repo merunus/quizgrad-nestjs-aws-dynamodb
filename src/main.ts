@@ -4,9 +4,6 @@ import { ValidationPipe } from "@nestjs/common";
 import { throwHttpException } from "./utils/throwHttpException";
 import { RESPONSE_TYPES } from "./modules/models/responseTypes";
 import { formatValidationErrors } from "./utils/formatValidationErrors";
-import { SwaggerModule } from "@nestjs/swagger";
-import { swaggerConfig } from "./swagger/swaggerConfig";
-
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
@@ -25,11 +22,6 @@ async function bootstrap() {
 			forbidNonWhitelisted: true // return error when non-defined properties added to the request body,
 		})
 	);
-
-	// Add swagger
-	const document = SwaggerModule.createDocument(app, swaggerConfig);
-	SwaggerModule.setup("api", app, document);
-
 	await app.listen(process.env.PORT);
 }
 bootstrap();

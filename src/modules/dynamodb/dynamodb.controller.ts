@@ -1,8 +1,7 @@
 import { Controller, Get } from "@nestjs/common";
 import { DynamodbService } from "./dynamodb.service";
-import { ApiTags } from "@nestjs/swagger";
 
-@ApiTags("dynamodb")
+
 @Controller("dynamodb")
 export class DynamodbController {
 	constructor(private readonly dynamodbService: DynamodbService) {}
