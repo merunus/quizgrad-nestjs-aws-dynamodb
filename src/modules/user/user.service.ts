@@ -25,12 +25,10 @@ import { PutObjectCommandInput, PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_STORAGE_BASE_URL } from "../../constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";
 import { TokenService } from "../token/token.service";
+import { s3StorageFolders } from "../models/s3StorageFolders";
 
 @Injectable()
 export class UserService {
-	// Attributes of the user item return
-	private userProjectionExpression: string = "email, username, createdAt, userId";
-
 	constructor(
 		private readonly dynamodbService: DynamodbService,
 		private readonly s3storageService: S3storageService,
@@ -78,7 +76,7 @@ export class UserService {
 		}
 	}
 
-	async handleGetAllUsers() {
+	async handleGetAllUsers(): Promise<User[]> {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
 			const params: ScanCommandInput = {
@@ -86,19 +84,18 @@ export class UserService {
 				FilterExpression: "begins_with(PK, :pkval)", // Get the users by the PK field which starts with USER
 				ExpressionAttributeValues: {
 					":pkval": "USER#"
-				},
-				ProjectionExpression: this.userProjectionExpression
+				}
 			};
 			const command = new ScanCommand(params);
 			const { Items } = await dbClient.send(command);
-			return Items;
+			return Items as User[];
 		} catch (error) {
 			console.error("DynamoDB Error:", error); // Log the actual error message
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to get all users");
 		}
 	}
 
-	async handleGetUserById(userId: string) {
+	async handleGetUserById(userId: string): Promise<User> {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
 			const params: GetCommandInput = {
@@ -106,20 +103,19 @@ export class UserService {
 				Key: {
 					PK: `USER#${userId}`,
 					SK: `#METADATA#${userId}`
-				},
-				ProjectionExpression: this.userProjectionExpression
+				}
 			};
 			const command = new GetCommand(params);
 			const { Item } = await dbClient.send(command);
 			if (!Item) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
-			return Item;
+			return Item as User;
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to find user");
 		}
 	}
 
-	async handleGetUserByEmail(userEmail: string) {
+	async handleGetUserByEmail(userEmail: string): Promise<User> {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
 			const params: QueryCommandInput = {
@@ -173,20 +169,19 @@ export class UserService {
 			throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
 
 		try {
-			const fileKey = `avatars/${userId}-${Date.now()}`; // Unique file key
+			// Construct unique file key
+			const fileKey = `${s3StorageFolders.AVATARS}/${userId}-${Date.now()}`;
 
-			const params: PutObjectCommandInput = {
-				Bucket: process.env.S3_BUCKET_NAME,
-				Key: fileKey,
-				Body: file.buffer,
-				ContentType: file.mimetype,
-				ACL: "public-read"
-			};
+			// Save image to s3 storage
+			await this.s3storageService.saveImageToStorage(fileKey, file);
 
-			// Save the image in the S3 storage
-			const s3Client = this.s3storageService.getS3Client();
-			const saveAvatarCommand = new PutObjectCommand(params);
-			await s3Client.send(saveAvatarCommand);
+			// If user already has avatar remove the old one
+			if (targetUser?.avatarUrl) {
+				await this.s3storageService.removeFileFromStorage(
+					targetUser.avatarUrl,
+					s3StorageFolders.AVATARS
+				);
+			}
 
 			// Construct the URL of the uploaded avatar
 			const avatarUrl = `${S3_STORAGE_BASE_URL}/${fileKey}`;
