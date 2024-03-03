@@ -5,6 +5,7 @@ import { DynamodbModule } from "./modules/dynamodb/dynamodb.module";
 import { UserModule } from "./modules/user/user.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { TokenModule } from "./modules/token/token.module";
+import { SetModule } from './modules/set/set.module';
 
 @Module({
 	imports: [
@@ -13,10 +14,12 @@ import { TokenModule } from "./modules/token/token.module";
 		S3storageModule,
 		AuthModule,
 		TokenModule,
+		SetModule,
 		ConfigModule.forRoot({
 			isGlobal: true,
 			envFilePath: ".env"
-		})
+		}),
+		SetModule
 	],
 	controllers: [],
 	providers: []
