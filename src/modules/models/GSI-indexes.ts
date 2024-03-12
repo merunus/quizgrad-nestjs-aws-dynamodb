@@ -1,3 +1,5 @@
 export enum GSIIndexes {
-	UsersByEmail = "UsersByEmailIndex"
+	UsersByEmail = "UsersByEmailIndex",
+	WordById = "WordByIdIndex",
+	SetById = "SetByIdIndex"
 }

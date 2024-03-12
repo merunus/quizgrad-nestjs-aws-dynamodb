@@ -4,12 +4,10 @@ import { CreateUserDto } from "../../dto/create-user-dto";
 import { hashPassword } from "../../utils/hashPassword";
 import { v4 as uuid } from "uuid";
 import {
-	PutCommand,
 	ScanCommand,
 	GetCommand,
 	UpdateCommandInput,
 	UpdateCommand,
-	DeleteCommand,
 	DeleteCommandInput,
 	GetCommandInput,
 	ScanCommandInput,
@@ -21,7 +19,6 @@ import { throwHttpException } from "../../utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
 import { TDynamoDBKeys } from "../../types/dynamodb";
 import { S3storageService } from "../../modules/s3storage/s3storage.service";
-import { PutObjectCommandInput, PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_STORAGE_BASE_URL } from "../../constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";
 import { TokenService } from "../token/token.service";
@@ -35,10 +32,20 @@ export class UserService {
 		private tokenService: TokenService
 	) {}
 
+	async handleCheckUserExistenceById(userId: string) {
+		const user = await this.handleGetUserById(userId);
+		if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
+		return user;
+	}
+
+	async handleCheckUserExistenceByEmail(userEmail: string) {
+		const user = await this.handleGetUserByEmail(userEmail);
+		if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with e ${userEmail} not found`);
+		return user;
+	}
+
 	async handleCreateUser({ email, password, username }: CreateUserDto) {
-		const isUserExist = await this.handleGetUserByEmail(email);
-		if (isUserExist)
-			throwHttpException(RESPONSE_TYPES.CONFLICT, `User with email ${email} already exist`);
+		await this.handleCheckUserExistenceByEmail(email);
 		try {
 			const userId = uuid();
 			const newUser: User & TDynamoDBKeys = {
@@ -50,7 +57,7 @@ export class UserService {
 				passwordHash: await hashPassword(password),
 				userId
 			};
-			const params: PutCommandInput = {
+			const commandInput: PutCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Item: newUser
 			};
@@ -61,36 +68,34 @@ export class UserService {
 			const accessToken = this.tokenService.generateAccessToken(userPayload);
 			const refreshToken = this.tokenService.generateRefreshToken(userPayload);
 
-			const dbClient = this.dynamodbService.getDynamoDbClient();
 			// Save user to database
-			await dbClient.send(new PutCommand(params));
-
+			await this.dynamodbService.sendPutCommand(commandInput);
 			return {
 				user: userPayload,
 				accessToken,
 				refreshToken
 			};
 		} catch (error) {
-			console.error("DynamoDB Error:", error); // Log the actual error message
+			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create user");
 		}
 	}
-
 	async handleGetAllUsers(): Promise<User[]> {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
 			const params: ScanCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
-				FilterExpression: "begins_with(PK, :pkval)", // Get the users by the PK field which starts with USER
+				// Include an additional condition to filter only items where SK begins with "#METADATA#"
+				FilterExpression: "begins_with(PK, :pkval) AND begins_with(SK, :skval)",
 				ExpressionAttributeValues: {
-					":pkval": "USER#"
+					":pkval": "USER#",
+					":skval": "#METADATA#"
 				}
 			};
 			const command = new ScanCommand(params);
 			const { Items } = await dbClient.send(command);
 			return Items as User[];
 		} catch (error) {
-			console.error("DynamoDB Error:", error); // Log the actual error message
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to get all users");
 		}
 	}
@@ -170,7 +175,7 @@ export class UserService {
 
 		try {
 			// Construct unique file key
-			const fileKey = `${s3StorageFolders.AVATARS}/${userId}-${Date.now()}`;
+			const fileKey = `${s3StorageFolders.AVATARS}/avatar_${userId}}`;
 
 			// Save image to s3 storage
 			await this.s3storageService.saveImageToStorage(fileKey, file);
@@ -197,19 +202,35 @@ export class UserService {
 
 	async handleDeleteUser(userId: string) {
 		try {
-			const params: DeleteCommandInput = {
+			const commandInput: DeleteCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Key: {
 					PK: `USER#${userId}`,
 					SK: `#METADATA#${userId}`
 				}
 			};
-			const command = new DeleteCommand(params);
-			const dynamoDbClient = this.dynamodbService.getDynamoDbClient();
-			await dynamoDbClient.send(command);
+			await this.dynamodbService.sendDeleteCommand(commandInput);
 			return "User was successfully deleted";
 		} catch (error) {
+			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete user");
+		}
+	}
+
+	async handleDeleteUserAvatar(userId: string) {
+		const user = await this.handleCheckUserExistenceById(userId);
+
+		if (!user?.avatarUrl)
+			throwHttpException(RESPONSE_TYPES.NOT_FOUND, "User doesn't have an avatar");
+
+		try {
+			await this.handleUpdateUserAvatarProperty(userId, "");
+			await this.s3storageService.removeFileFromStorage(user.avatarUrl, s3StorageFolders.AVATARS);
+
+			return "User avatar was successfully deleted";
+		} catch (error) {
+			if (error?.response) throw error;
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete user avatar");
 		}
 	}
 }

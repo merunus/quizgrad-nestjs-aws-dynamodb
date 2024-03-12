@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from "class-validator";
+import { IsNotEmpty, IsString } from "class-validator";
 
 export class CreateWordDto {
 	@IsString()
@@ -8,7 +8,4 @@ export class CreateWordDto {
 	@IsString()
 	@IsNotEmpty()
 	translate: string;
-
-	@IsOptional()
-	imageUrl?: string;
 }

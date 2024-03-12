@@ -45,6 +45,7 @@ export class S3storageService {
 	}
 
 	async removeFileFromStorage(key: string, folder: string) {
+		console.log(`remove file with key ${this.extractFileKeyFromUrl(key)}`);
 		const params = {
 			Bucket: process.env.S3_BUCKET_NAME,
 			Key: `${folder}/${this.extractFileKeyFromUrl(key)}`
@@ -56,6 +57,8 @@ export class S3storageService {
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to remove image from s3 storage");
 		}
 	}
+
+	
 
 	extractFileKeyFromUrl(url: string): string {
 		// Check if the URL is already a simple file key without any slashes

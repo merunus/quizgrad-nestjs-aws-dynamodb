@@ -5,7 +5,7 @@ import { Type } from "class-transformer";
 export class CreateSetDto {
 	@IsString()
 	@IsNotEmpty()
-	name: string;
+	title: string;
 
 	@IsString()
 	@IsNotEmpty()
