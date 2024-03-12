@@ -4,13 +4,16 @@ import { ValidationPipe } from "@nestjs/common";
 import { throwHttpException } from "./utils/throwHttpException";
 import { RESPONSE_TYPES } from "./modules/models/responseTypes";
 import { formatValidationErrors } from "./utils/formatValidationErrors";
+import { allowedCorsOrigins } from "./constants/core.constants";
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
+
 	app.enableCors({
-		origin: process.env.VERCEL_ORIGIN_URL,
+		origin: allowedCorsOrigins,
 		credentials: true
 	});
+	
 	app.useGlobalPipes(
 		new ValidationPipe({
 			exceptionFactory: (errors) => {
