@@ -44,7 +44,6 @@ export class UserController {
 	@UseGuards(JwtAuthGuard)
 	async deleteUserAvatar(@Req() req) {
 		const userId = req.user.userId;
-		console.log("Delete user avatar");
 		return await this.userService.handleDeleteUserAvatar(userId);
 	}
 

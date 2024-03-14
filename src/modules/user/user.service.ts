@@ -32,20 +32,11 @@ export class UserService {
 		private tokenService: TokenService
 	) {}
 
-	async handleCheckUserExistenceById(userId: string) {
-		const user = await this.handleGetUserById(userId);
-		if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
-		return user;
-	}
-
-	async handleCheckUserExistenceByEmail(userEmail: string) {
-		const user = await this.handleGetUserByEmail(userEmail);
-		if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with e ${userEmail} not found`);
-		return user;
-	}
-
 	async handleCreateUser({ email, password, username }: CreateUserDto) {
-		await this.handleCheckUserExistenceByEmail(email);
+		// Check if user with such email already exist
+		const user = await this.handleGetUserByEmail(email);
+		if (user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User ${email} already exist`);
+
 		try {
 			const userId = uuid();
 			const newUser: User & TDynamoDBKeys = {
@@ -80,6 +71,7 @@ export class UserService {
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create user");
 		}
 	}
+	
 	async handleGetAllUsers(): Promise<User[]> {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
@@ -218,7 +210,8 @@ export class UserService {
 	}
 
 	async handleDeleteUserAvatar(userId: string) {
-		const user = await this.handleCheckUserExistenceById(userId);
+		const user = await this.handleGetUserById(userId);
+		if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
 
 		if (!user?.avatarUrl)
 			throwHttpException(RESPONSE_TYPES.NOT_FOUND, "User doesn't have an avatar");
