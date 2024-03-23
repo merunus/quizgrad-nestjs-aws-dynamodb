@@ -44,7 +44,15 @@ export class SetService {
 				}
 			};
 			const sets = await this.dynamodbService.sendScanCommand<LearningSet[]>(commandInput);
-			return sets;
+
+			const setsWithWords = await Promise.all(
+				sets.map(async (set) => {
+					const words = await this.wordService.handleGetWordsOfSet(set);
+					return words && words.length ? ({ ...set, words } as LearningSet) : set;
+				})
+			);
+
+			return setsWithWords;
 		} catch (error) {
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to get all sets");
 		}
@@ -73,7 +81,7 @@ export class SetService {
 		try {
 			const setId = uuid();
 			// Save words to the database
-			await this.wordService.saveWordsToDatabase(createSetDto.words, files, setId);
+			await this.wordService.handleSaveWordsToDatabase(createSetDto.words, files, setId);
 
 			const newSet: LearningSet & TDynamoDBKeys = {
 				PK: `USER#${userId}`,
@@ -100,7 +108,6 @@ export class SetService {
 
 	async handleDeleteSet(userId: string, setId: string) {
 		const set = await this.handleCheckSetExistence(setId);
-
 		try {
 			console.log(userId, setId);
 			const deleteSetCommandInput: DeleteCommandInput = {
@@ -111,9 +118,9 @@ export class SetService {
 			await this.dynamodbService.sendDeleteCommand(deleteSetCommandInput);
 
 			// Get the words that belongs to the set
-			const wordsOfTheDeletedSet: Word[] = await this.wordService.getWordsOfSet(set);
+			const wordsOfTheDeletedSet: Word[] = await this.wordService.handleGetWordsOfSet(set);
 			// Delete words that belongs to the set
-			await this.wordService.deleteWordsInBatches(wordsOfTheDeletedSet, setId);
+			await this.wordService.handleDeleteWordsInBatches(wordsOfTheDeletedSet, setId);
 
 			return "Set and its words were successfully deleted";
 		} catch (error) {
@@ -134,8 +141,12 @@ export class SetService {
 
 		try {
 			const results = await this.dynamodbService.sendQueryCommand<LearningSet[]>(commandInput);
+			if (!results.length)
+				throwHttpException(RESPONSE_TYPES.NOT_FOUND, `Set with id ${setId} doesn't exist`);
 			const set = results[0];
-			return set;
+
+			const setWords = await this.wordService.handleGetWordsOfSet(set);
+			return { ...set, words: setWords } as LearningSet;
 		} catch (error) {
 			console.error("Error querying set by ID:", error);
 			throw error;

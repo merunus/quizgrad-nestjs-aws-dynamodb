@@ -3,6 +3,7 @@ import {
 	Controller,
 	Delete,
 	Get,
+	Param,
 	Post,
 	Query,
 	Req,
@@ -26,12 +27,14 @@ export class SetController {
 	@Get()
 	@UseGuards(JwtAuthGuard)
 	async getAllSets() {
+		console.log("hey");
 		return await this.setService.handleGetAllSets();
 	}
 
-	@Get()
+	// Use param "/" instead of query "?" because the /set is already taken
+	@Get(":setId")
 	@UseGuards(JwtAuthGuard)
-	async getSetById(@Query("setId") setId: string) {
+	async getSetById(@Param("setId") setId: string) {
 		return await this.setService.handleGetSetById(setId);
 	}
 
@@ -52,7 +55,7 @@ export class SetController {
 	@UseGuards(JwtAuthGuard)
 	async getSetWords(@Query("setId") setId: string): Promise<any> {
 		const set = await this.setService.handleCheckSetExistence(setId);
-		return await this.wordService.getWordsOfSet(set);
+		return await this.wordService.handleGetWordsOfSet(set);
 	}
 
 	@Delete()

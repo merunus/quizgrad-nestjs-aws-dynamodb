@@ -21,7 +21,7 @@ export class WordService {
 		private readonly s3storageService: S3storageService
 	) {}
 
-	async getWordsOfSet(set: LearningSet) {
+	async handleGetWordsOfSet(set: LearningSet) {
 		const commandInput = {
 			TableName: process.env.DYNAMODB_TABLE_NAME,
 			KeyConditionExpression: "PK = :pk",
@@ -38,7 +38,7 @@ export class WordService {
 		}
 	}
 
-	async getWordById(wordId: string) {
+	async handleGetWordById(wordId: string) {
 		const commandInput = {
 			TableName: process.env.DYNAMODB_TABLE_NAME,
 			IndexName: GSIIndexes.WordById,
@@ -49,15 +49,17 @@ export class WordService {
 		};
 
 		try {
-			const word: Word = await this.dynamodbService.sendQueryCommand<Word[]>(commandInput)[0];
-			return word;
+			const results: Word[] = await this.dynamodbService.sendQueryCommand<Word[]>(commandInput);
+			if (!results.length)
+				throwHttpException(RESPONSE_TYPES.NOT_FOUND, `Word with id ${wordId} doesn't exist`);
+			return results[0] as Word & TDynamoDBKeys;
 		} catch (error) {
 			console.error("Error querying word by ID:", error);
 			throw error;
 		}
 	}
 
-	private async saveWordImageToS3Storage(file: Express.Multer.File, wordId: string) {
+	private async handleSaveWordImageToS3Storage(file: Express.Multer.File, wordId: string) {
 		try {
 			const fileKey = `${s3StorageFolders.WORDS_IMAGES}/wordImage_${wordId}`;
 			const fileURL = `${S3_STORAGE_BASE_URL}/${fileKey}`;
@@ -68,7 +70,7 @@ export class WordService {
 		}
 	}
 
-	private async saveWordToDatabase(newWord: Word) {
+	private async handleSaveWordToDatabase(newWord: Word) {
 		const commandInput: PutCommandInput = {
 			TableName: process.env.DYNAMODB_TABLE_NAME,
 			Item: newWord
@@ -81,18 +83,18 @@ export class WordService {
 		}
 	}
 
-	private async getWordImageUrlFromUploadedFiles(
+	private async handleGetWordImageUrlFromUploadedFiles(
 		files: Express.Multer.File[],
 		wordIndex: number,
 		wordId: string
 	): Promise<string> {
 		// Field name example is wordImage_0
 		const wordFile = files.find((file) => file.fieldname.split("_")[1] === wordIndex.toString());
-		if (wordFile) return await this.saveWordImageToS3Storage(wordFile, wordId); // Returns a ready word url
+		if (wordFile) return await this.handleSaveWordImageToS3Storage(wordFile, wordId); // Returns a ready word url
 		return "";
 	}
 
-	async saveWordsToDatabase(
+	async handleSaveWordsToDatabase(
 		words: CreateWordDto[],
 		files: Array<Express.Multer.File>,
 		setId: string
@@ -102,7 +104,11 @@ export class WordService {
 			const saveWordPromises = words.map(async ({ translate, word }, index) => {
 				const wordId = uuid();
 				// Get the either ready url image or empty string
-				const wordImageUrl = await this.getWordImageUrlFromUploadedFiles(files, index, wordId);
+				const wordImageUrl = await this.handleGetWordImageUrlFromUploadedFiles(
+					files,
+					index,
+					wordId
+				);
 				const newWord: Word & TDynamoDBKeys = {
 					translate,
 					word,
@@ -111,7 +117,7 @@ export class WordService {
 					SK: `WORD#${wordId}`,
 					imageUrl: wordImageUrl
 				};
-				await this.saveWordToDatabase(newWord);
+				await this.handleSaveWordToDatabase(newWord);
 				return newWord;
 			});
 
@@ -121,32 +127,32 @@ export class WordService {
 		return [];
 	}
 
-	async deleteWordFromDatabase(setId: string, wordId: string) {
-		const wordForDeletion = await this.getWordById(wordId);
+	async handleDeleteWordFromDatabase(wordId: string) {
+		const wordForDeletion = await this.handleGetWordById(wordId);
 		if (!wordForDeletion)
 			throwHttpException(RESPONSE_TYPES.NOT_FOUND, `Word with id ${wordId} not found`);
 
 		const commandInput: DeleteCommandInput = {
 			TableName: process.env.DYNAMODB_TABLE_NAME,
 			Key: {
-				PK: `SET#${setId}`,
+				PK: wordForDeletion.PK,
 				SK: `WORD#${wordId}`
 			}
 		};
 		await this.dynamodbService.sendDeleteCommand(commandInput);
 
 		// Delete the word image if it exist
-		await this.deleteWordImageFromS3Storage(wordForDeletion?.imageUrl);
+		await this.handleDeleteWordImageFromS3Storage(wordForDeletion?.imageUrl);
 
 		return `Word with id ${wordId} was successfully deleted`;
 	}
 
-	async deleteWordImageFromS3Storage(wordImageUrl: string) {
+	async handleDeleteWordImageFromS3Storage(wordImageUrl: string) {
 		if (!wordImageUrl) return;
-		await this.s3storageService.removeFileFromStorage(wordImageUrl, s3StorageFolders.AVATARS);
+		await this.s3storageService.removeFileFromStorage(wordImageUrl, s3StorageFolders.WORDS_IMAGES);
 	}
 
-	async deleteWordsInBatches(words: Word[], setId: string) {
+	async handleDeleteWordsInBatches(words: Word[], setId: string) {
 		try {
 			// Divide words into batches of 25 for BatchWriteItem
 			const batches: Word[][] = []; // Example [[...], [...]]
@@ -171,5 +177,29 @@ export class WordService {
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete words batch");
 		}
 	}
-	
+
+	async handleUploadWordImage(file: Express.Multer.File, wordId: string) {
+		try {
+			const word = await this.handleGetWordById(wordId);
+			if (!word)
+				throwHttpException(RESPONSE_TYPES.NOT_FOUND, `Word with id ${wordId} doesn't exist`);
+
+			// If word has an image - delete it and replace with the new one
+			if (word.imageUrl) await this.handleDeleteWordImageFromS3Storage(word?.imageUrl);
+
+			// Save the new image and get the url
+			const newWordImageURL = await this.handleSaveWordImageToS3Storage(file, wordId);
+
+			// Construct new word
+			const newWord: Word = { ...word, imageUrl: newWordImageURL };
+
+			// Save new word to database
+			await this.handleSaveWordToDatabase(newWord);
+
+			return "Successfully uploaded an image to the word";
+		} catch (error) {
+			if (error?.response) throw error;
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to upload word image");
+		}
+	}
 }
