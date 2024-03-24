@@ -35,7 +35,7 @@ export class UserService {
 	async handleCreateUser({ email, password, username }: CreateUserDto) {
 		// Check if user with such email already exist
 		const user = await this.handleGetUserByEmail(email);
-		if (user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User ${email} already exist`);
+		if (user) throwHttpException(RESPONSE_TYPES.CONFLICT, `User ${email} already exist`);
 
 		try {
 			const userId = uuid();

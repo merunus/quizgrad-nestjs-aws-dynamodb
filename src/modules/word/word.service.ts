@@ -1,17 +1,17 @@
 import { Injectable } from "@nestjs/common";
-import { CreateWordDto } from "src/dto/create-word-dto";
+import { CreateWordDto } from "../../dto/create-word-dto";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { v4 as uuid } from "uuid";
 import { BatchWriteCommandInput, DeleteCommandInput, PutCommandInput } from "@aws-sdk/lib-dynamodb";
-import { TDynamoDBKeys } from "src/types/dynamodb";
+import { TDynamoDBKeys } from "../../types/dynamodb";
 import { s3StorageFolders } from "../models/s3StorageFolders";
 import { S3storageService } from "../s3storage/s3storage.service";
-import { throwHttpException } from "src/utils/throwHttpException";
+import { throwHttpException } from "../../utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
 import {
 	DB_BATCH_COMMAND_WRITE_MAX_ITEMS_AMOUNT,
 	S3_STORAGE_BASE_URL
-} from "src/constants/core.constants";
+} from "../../constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";
 
 @Injectable()

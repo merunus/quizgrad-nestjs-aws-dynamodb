@@ -15,7 +15,7 @@ import { CreateUserDto } from "../../dto/create-user-dto";
 import { UserService } from "./user.service";
 import { JwtAuthGuard } from "../../guards/jwt-auth.guard";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { multerImageUploadConfig } from "src/utils/multer/multerImageUploadConfig";
+import { multerImageUploadConfig } from "../../utils/multer/multerImageUploadConfig";
 
 @Controller("user")
 export class UserController {

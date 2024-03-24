@@ -13,7 +13,7 @@ import {
 	ScanCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { Injectable } from "@nestjs/common";
-import { throwHttpException } from "src/utils/throwHttpException";
+import { throwHttpException } from "../../utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
 
 @Injectable()

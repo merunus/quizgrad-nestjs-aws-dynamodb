@@ -8,16 +8,16 @@ import {
 	ScanCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
-import { throwHttpException } from "src/utils/throwHttpException";
+import { throwHttpException } from "../../utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
 import { plainToInstance } from "class-transformer";
-import { CreateSetDto } from "src/dto/create-set-dto";
+import { CreateSetDto } from "../../dto/create-set-dto";
 import { validate } from "class-validator";
-import { formatValidationErrors } from "src/utils/formatValidationErrors";
+import { formatValidationErrors } from "../../utils/formatValidationErrors";
 import { UserService } from "../user/user.service";
 import { WordService } from "../word/word.service";
 import { v4 as uuid } from "uuid";
-import { TDynamoDBKeys } from "src/types/dynamodb";
+import { TDynamoDBKeys } from "../../types/dynamodb";
 import { GSIIndexes } from "../models/GSI-indexes";
 
 @Injectable()

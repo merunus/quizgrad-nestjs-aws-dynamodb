@@ -1,5 +1,5 @@
 import { FileFilterCallback } from "multer";
-import { validImageFileFormatsRegex } from "src/constants/core.constants";
+import { validImageFileFormatsRegex } from "../../constants/core.constants";
 
 export const multerImageFilesFilter = (_, file, callback: FileFilterCallback) => {
     const filename = file.originalname.split("|")[0]; // Extract word index from the filename

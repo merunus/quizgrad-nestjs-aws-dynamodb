@@ -10,9 +10,9 @@ import {
 	UseInterceptors
 } from "@nestjs/common";
 import { WordService } from "./word.service";
-import { JwtAuthGuard } from "src/guards/jwt-auth.guard";
+import { JwtAuthGuard } from "../../guards/jwt-auth.guard";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { multerImageUploadConfig } from "src/utils/multer/multerImageUploadConfig";
+import { multerImageUploadConfig } from "../../utils/multer/multerImageUploadConfig";
 
 @Controller("word")
 export class WordController {
