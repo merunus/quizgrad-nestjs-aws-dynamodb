@@ -10,7 +10,9 @@ import {
 	QueryCommand,
 	QueryCommandInput,
 	ScanCommand,
-	ScanCommandInput
+	ScanCommandInput,
+	UpdateCommand,
+	UpdateCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { Injectable } from "@nestjs/common";
 import { throwHttpException } from "src/utils/throwHttpException";
@@ -61,10 +63,22 @@ export class DynamodbService {
 		}
 	}
 
+	async sendUpdateCommand(commandInput: UpdateCommandInput) {
+		try {
+			const { Attributes } = await this.dynamoDbClient.send(new UpdateCommand(commandInput));
+			return Attributes;
+		} catch (error) {
+			throwHttpException(
+				RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to update element to the dynamodb table: ${error}`
+			);
+		}
+	}
+
 	async sendDeleteCommand(commandInput: DeleteCommandInput) {
 		try {
 			const response = await this.dynamoDbClient.send(new DeleteCommand(commandInput));
-			return response
+			return response;
 		} catch (error) {
 			throwHttpException(
 				RESPONSE_TYPES.SERVER_ERROR,
@@ -97,7 +111,7 @@ export class DynamodbService {
 	async sendBatchWriteCommand(commandInput: BatchWriteCommandInput) {
 		try {
 			const response = await this.dynamoDbClient.send(new BatchWriteCommand(commandInput));
-			return response
+			return response;
 		} catch (error) {
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed during batch write operation");
 		}

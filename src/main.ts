@@ -18,7 +18,6 @@ async function bootstrap() {
 				return throwHttpException(RESPONSE_TYPES.BAD_REQUEST, formattedErrors);
 			},
 			stopAtFirstError: true,
-			whitelist: true, // remove non-defined properties from the requests body,
 			forbidNonWhitelisted: true // return error when non-defined properties added to the request body,
 		})
 	);

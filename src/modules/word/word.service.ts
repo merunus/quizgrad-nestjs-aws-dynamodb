@@ -2,8 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { CreateWordDto } from "src/dto/create-word-dto";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { v4 as uuid } from "uuid";
-import { BatchWriteCommandInput, DeleteCommandInput, PutCommandInput } from "@aws-sdk/lib-dynamodb";
-import { TDynamoDBKeys } from "src/types/dynamodb";
+import {
+	BatchWriteCommandInput,
+	DeleteCommandInput,
+	PutCommandInput,
+	UpdateCommandInput
+} from "@aws-sdk/lib-dynamodb";
 import { s3StorageFolders } from "../models/s3StorageFolders";
 import { S3storageService } from "../s3storage/s3storage.service";
 import { throwHttpException } from "src/utils/throwHttpException";
@@ -13,6 +17,7 @@ import {
 	S3_STORAGE_BASE_URL
 } from "src/constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";
+import { UpdateWordDto } from "src/dto/update-word-dto";
 
 @Injectable()
 export class WordService {
@@ -21,7 +26,12 @@ export class WordService {
 		private readonly s3storageService: S3storageService
 	) {}
 
-	async handleGetWordsOfSet(set: LearningSet) {
+	private findWordFileByIndex(files: Express.Multer.File[], index: number) {
+		// Field name example is wordImage_0
+		return files.find((file) => file.fieldname.split("_")[1] === index.toString());
+	}
+
+	async handleGetWordsOfSet(set: LearningSet): Promise<(Word & TDynamoDBKeys)[]> {
 		const commandInput = {
 			TableName: process.env.DYNAMODB_TABLE_NAME,
 			KeyConditionExpression: "PK = :pk",
@@ -31,9 +41,9 @@ export class WordService {
 		};
 		try {
 			const words = await this.dynamodbService.sendQueryCommand<Word[]>(commandInput);
-			return words;
+			return words as (Word & TDynamoDBKeys)[];
 		} catch (error) {
-			console.error("Error querying words by setId:", error);
+			console.error(`Error querying words by setId: ${error}`);
 			throw error;
 		}
 	}
@@ -54,7 +64,7 @@ export class WordService {
 				throwHttpException(RESPONSE_TYPES.NOT_FOUND, `Word with id ${wordId} doesn't exist`);
 			return results[0] as Word & TDynamoDBKeys;
 		} catch (error) {
-			console.error("Error querying word by ID:", error);
+			console.error(`Error querying word by ID: ${error}`);
 			throw error;
 		}
 	}
@@ -66,7 +76,10 @@ export class WordService {
 			await this.s3storageService.saveImageToStorage(fileKey, file);
 			return fileURL;
 		} catch (error) {
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to save word image to s3 storage");
+			throwHttpException(
+				RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to save word image to s3 storage: ${error}`
+			);
 		}
 	}
 
@@ -79,7 +92,61 @@ export class WordService {
 			await this.dynamodbService.sendPutCommand(commandInput);
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to save word to database");
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to save word to database : ${error}`);
+		}
+	}
+
+	async handleUpdateWordInDatabase({
+		updateWordDto,
+		passedWord,
+		file,
+		shouldRemoveExistingImageIfEmpty
+	}: {
+		updateWordDto: UpdateWordDto;
+		passedWord?: Word & TDynamoDBKeys;
+		file?: Express.Multer.File | undefined;
+		shouldRemoveExistingImageIfEmpty?: boolean;
+	}) {
+		try {
+			let existingWord: (Word & TDynamoDBKeys) | null = null;
+			// Use either passed word or fetch it
+			if (passedWord) existingWord = passedWord;
+			else existingWord = await this.handleGetWordById(updateWordDto.wordId);
+
+			// Remove the existing image if the flag is passed
+			if (!file && shouldRemoveExistingImageIfEmpty && existingWord.imageUrl)
+				await this.handleDeleteWordImageFromS3Storage(existingWord.imageUrl);
+
+			// Save the new image and get the url
+			const newWordImageURL = file
+				? await this.handleSaveWordImageToS3Storage(file, updateWordDto.wordId)
+				: "";
+
+			// Command for word update
+			const updateInput: UpdateCommandInput = {
+				TableName: process.env.DYNAMODB_TABLE_NAME,
+				Key: {
+					PK: existingWord.PK,
+					SK: existingWord.SK
+				},
+				UpdateExpression: "set #word = :word, #translate = :translate, #imageUrl = :imageUrl",
+				ExpressionAttributeNames: {
+					"#word": "word",
+					"#translate": "translate",
+					"#imageUrl": "imageUrl"
+				},
+				ExpressionAttributeValues: {
+					":word": updateWordDto.word,
+					":translate": updateWordDto.translate,
+					":imageUrl": newWordImageURL
+				},
+				ReturnValues: "ALL_NEW"
+			};
+
+			return await this.dynamodbService.sendUpdateCommand(updateInput);
+		} catch (error) {
+			if (error?.response) throw error;
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to update word : ${error}`);
 		}
 	}
 
@@ -88,13 +155,12 @@ export class WordService {
 		wordIndex: number,
 		wordId: string
 	): Promise<string> {
-		// Field name example is wordImage_0
-		const wordFile = files.find((file) => file.fieldname.split("_")[1] === wordIndex.toString());
+		const wordFile = this.findWordFileByIndex(files, wordIndex);
 		if (wordFile) return await this.handleSaveWordImageToS3Storage(wordFile, wordId); // Returns a ready word url
 		return "";
 	}
 
-	async handleSaveWordsToDatabase(
+	async handleSaveWordsOfSet(
 		words: CreateWordDto[],
 		files: Array<Express.Multer.File>,
 		setId: string
@@ -127,6 +193,63 @@ export class WordService {
 		return [];
 	}
 
+	async handleUpdateWordsOfSet({
+		existingWords,
+		files,
+		setId,
+		wordsDto
+	}: {
+		existingWords: (Word & TDynamoDBKeys)[];
+		wordsDto: UpdateWordDto[];
+		files: Array<Express.Multer.File>;
+		setId: string;
+	}) {
+		try {
+			// Delete the words that exist, but not included in dto
+			const wordsForDelete = existingWords.filter(
+				(existingWord) => !wordsDto.some((wordDto) => wordDto.wordId === existingWord.wordId)
+			);
+			await this.handleDeleteWordsInBatches(wordsForDelete, setId);
+
+			for (let i = 0; i < wordsDto.length; i++) {
+				const wordDto = wordsDto[i];
+				const existingWord = existingWords.find(
+					(existingWord) => existingWord.wordId === wordDto?.wordId
+				);
+				// Update the existing word
+				if (existingWord) {
+					const wordFile = this.findWordFileByIndex(files, i);
+					// Update the word
+					await this.handleUpdateWordInDatabase({
+						updateWordDto: wordDto,
+						file: wordFile,
+						passedWord: existingWord,
+						shouldRemoveExistingImageIfEmpty: true
+					});
+				}
+				// Create new one
+				else {
+					const wordId = uuid();
+					// Get the either ready url image or empty string
+					const wordImageUrl = await this.handleGetWordImageUrlFromUploadedFiles(files, i, wordId);
+					const newWord: Word & TDynamoDBKeys = {
+						translate: wordDto.translate,
+						word: wordDto.word,
+						wordId,
+						PK: `SET#${setId}`,
+						SK: `WORD#${wordId}`,
+						imageUrl: wordImageUrl
+					};
+
+					await this.handleSaveWordToDatabase(newWord);
+				}
+			}
+		} catch (error) {
+			if (error?.response) throw error;
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to update words of set : ${error}`);
+		}
+	}
+
 	async handleDeleteWordFromDatabase(wordId: string) {
 		const wordForDeletion = await this.handleGetWordById(wordId);
 		if (!wordForDeletion)
@@ -155,25 +278,37 @@ export class WordService {
 	async handleDeleteWordsInBatches(words: Word[], setId: string) {
 		try {
 			// Divide words into batches of 25 for BatchWriteItem
-			const batches: Word[][] = []; // Example [[...], [...]]
+			const batches: Word[][] = [];
 			while (words.length) {
 				batches.push(words.splice(0, DB_BATCH_COMMAND_WRITE_MAX_ITEMS_AMOUNT));
 			}
-			// For each batch, create and send BatchWriteItem requests
+
 			for (const batch of batches) {
+				// Prepare delete requests for BatchWriteItem
 				const deleteRequests = batch.map((word) => ({
 					DeleteRequest: {
 						Key: { PK: `SET#${setId}`, SK: `WORD#${word.wordId}` }
 					}
 				}));
+
+				// Prepare list of images to delete if they exist
+				const imagesToDelete = batch.filter((word) => word.imageUrl).map((word) => word.imageUrl);
+
+				// Perform batch delete of words
 				const batchWriteCommandInput: BatchWriteCommandInput = {
 					RequestItems: {
 						[process.env.DYNAMODB_TABLE_NAME]: deleteRequests
 					}
 				};
 				await this.dynamodbService.sendBatchWriteCommand(batchWriteCommandInput);
+
+				// Delete images from S3, if any
+				for (const imageUrl of imagesToDelete) {
+					await this.handleDeleteWordImageFromS3Storage(imageUrl);
+				}
 			}
 		} catch (error) {
+			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete words batch");
 		}
 	}

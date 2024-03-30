@@ -5,6 +5,7 @@ import {
 	Get,
 	Param,
 	Post,
+	Put,
 	Query,
 	Req,
 	UploadedFiles,
@@ -27,7 +28,6 @@ export class SetController {
 	@Get()
 	@UseGuards(JwtAuthGuard)
 	async getAllSets() {
-		console.log("hey");
 		return await this.setService.handleGetAllSets();
 	}
 
@@ -49,6 +49,19 @@ export class SetController {
 	) {
 		const userId = req.user.userId;
 		return this.setService.handleCreateUserSet(userId, createSetDtoString, files);
+	}
+
+	@Put()
+	@UseGuards(JwtAuthGuard)
+	// Use AnyFilesInterceptor to get all the uploaded files from the body
+	@UseInterceptors(AnyFilesInterceptor(multerImageUploadConfig))
+	async updateUserSet(
+		@UploadedFiles() files: Array<Express.Multer.File>,
+		@Body("setBody") updateSetDtoString: string,
+		@Req() req
+	) {
+		const userId = req.user.userId;
+		return this.setService.handleUpdateUserSet(userId, updateSetDtoString, files);
 	}
 
 	@Get("words")

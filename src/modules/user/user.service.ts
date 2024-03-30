@@ -17,7 +17,6 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { throwHttpException } from "../../utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
-import { TDynamoDBKeys } from "../../types/dynamodb";
 import { S3storageService } from "../../modules/s3storage/s3storage.service";
 import { S3_STORAGE_BASE_URL } from "../../constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";

@@ -5,7 +5,8 @@ import {
 	PutCommandInput,
 	QueryCommandInput,
 	ScanCommand,
-	ScanCommandInput
+	ScanCommandInput,
+	UpdateCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { throwHttpException } from "src/utils/throwHttpException";
@@ -17,8 +18,9 @@ import { formatValidationErrors } from "src/utils/formatValidationErrors";
 import { UserService } from "../user/user.service";
 import { WordService } from "../word/word.service";
 import { v4 as uuid } from "uuid";
-import { TDynamoDBKeys } from "src/types/dynamodb";
 import { GSIIndexes } from "../models/GSI-indexes";
+import { parseAndValidateDto } from "src/utils/parseAndValidateDto";
+import { UpdateSetDto } from "src/dto/update-set-dto";
 
 @Injectable()
 export class SetService {
@@ -63,15 +65,8 @@ export class SetService {
 		createSetDtoString: string,
 		files: Array<Express.Multer.File>
 	) {
-		// Transform stringified set dto
-		const createSetDto = plainToInstance(CreateSetDto, JSON.parse(createSetDtoString));
-
-		// Check for errors parsed gto
-		const createSetDtoErrors = await validate(createSetDto);
-		if (createSetDtoErrors.length) {
-			const formattedErrors = formatValidationErrors(createSetDtoErrors);
-			throwHttpException(RESPONSE_TYPES.BAD_REQUEST, formattedErrors);
-		}
+		// Validate dto json
+		const createSetDto = await parseAndValidateDto<CreateSetDto>(createSetDtoString, CreateSetDto);
 
 		// Get the user id from the JWT guard by token
 		const setCreator = await this.userService.handleGetUserById(userId);
@@ -81,7 +76,7 @@ export class SetService {
 		try {
 			const setId = uuid();
 			// Save words to the database
-			await this.wordService.handleSaveWordsToDatabase(createSetDto.words, files, setId);
+			await this.wordService.handleSaveWordsOfSet(createSetDto.words, files, setId);
 
 			const newSet: LearningSet & TDynamoDBKeys = {
 				PK: `USER#${userId}`,
@@ -99,17 +94,86 @@ export class SetService {
 			// Save set to database
 			await this.dynamodbService.sendPutCommand(command);
 
-			return newSet;
+			const wordsOfTheSet = await this.wordService.handleGetWordsOfSet(newSet);
+
+			return { newSet, words: wordsOfTheSet };
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create set");
 		}
 	}
 
+	async handleUpdateUserSet(
+		userId: string,
+		updateSetDtoString: string,
+		files: Array<Express.Multer.File>
+	) {
+		try {
+			// Validate dto json
+			const updateSetDto = await parseAndValidateDto<UpdateSetDto>(
+				updateSetDtoString,
+				UpdateSetDto
+			);
+
+			// Check if the set exists and belongs to the user
+			const existingSet = await this.handleGetSetById(updateSetDto.setId);
+			if (!existingSet)
+				throwHttpException(
+					RESPONSE_TYPES.NOT_FOUND,
+					`Set with id ${updateSetDto.setId} doesn't exist`
+				);
+			if (existingSet.PK !== `USER#${userId}`)
+				throwHttpException(
+					RESPONSE_TYPES.CONFLICT,
+					`You don't have permissions to update this set`
+				);
+
+			// Command for set update
+			const updateInput: UpdateCommandInput = {
+				TableName: process.env.DYNAMODB_TABLE_NAME,
+				Key: {
+					PK: `USER#${userId}`,
+					SK: `SET#${updateSetDto.setId}`
+				},
+				UpdateExpression: "set #title = :title, #language = :language",
+				ExpressionAttributeNames: {
+					"#title": "title",
+					"#language": "language"
+				},
+				ExpressionAttributeValues: {
+					":title": updateSetDto.title,
+					":language": updateSetDto.language
+				},
+				ReturnValues: "ALL_NEW"
+			};
+
+			// Fetch existing words of the set
+			const existingWords = await this.wordService.handleGetWordsOfSet(existingSet);
+
+			// Update the words, save new ones, remove the non-included ones
+			await this.wordService.handleUpdateWordsOfSet({
+				existingWords,
+				files,
+				setId: existingSet.setId,
+				wordsDto: updateSetDto.words
+			});
+
+			// Update the set
+			return await this.dynamodbService.sendUpdateCommand(updateInput);
+		} catch (error) {
+			if (error?.response) throw error;
+			throwHttpException(
+				RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to update user set and its words: ${error}`
+			);
+		}
+	}
+
 	async handleDeleteSet(userId: string, setId: string) {
 		const set = await this.handleCheckSetExistence(setId);
+		if (set.PK !== `USER#${userId}`)
+			throwHttpException(RESPONSE_TYPES.CONFLICT, "You don't have permissions to delete this set");
 		try {
-			console.log(userId, setId);
 			const deleteSetCommandInput: DeleteCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Key: { PK: `USER#${userId}`, SK: `SET#${setId}` }
@@ -146,7 +210,7 @@ export class SetService {
 			const set = results[0];
 
 			const setWords = await this.wordService.handleGetWordsOfSet(set);
-			return { ...set, words: setWords } as LearningSet;
+			return { ...set, words: setWords } as LearningSet & TDynamoDBKeys;
 		} catch (error) {
 			console.error("Error querying set by ID:", error);
 			throw error;
