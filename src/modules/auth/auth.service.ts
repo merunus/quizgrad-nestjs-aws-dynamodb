@@ -26,8 +26,8 @@ export class AuthService {
 
 	async login(user: Omit<User, "passwordHash">) {
 		return {
-			access_token: this.tokenService.generateAccessToken(user),
-			refresh_token: this.tokenService.generateRefreshToken(user)
+			accessToken: this.tokenService.generateAccessToken(user),
+			refreshToken: this.tokenService.generateRefreshToken(user)
 		};
 	}
 }
