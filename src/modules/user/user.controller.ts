@@ -26,6 +26,13 @@ export class UserController {
 		return await this.userService.handleGetAllUsers();
 	}
 
+	@Get("me")
+	@UseGuards(JwtAuthGuard)
+	async getMyUser(@Req() req) {
+		const userId = req.user.userId;
+		return await this.userService.handleGetUserById(userId);
+	}
+
 	@Get(":userId")
 	@UseGuards(JwtAuthGuard)
 	async getUserById(@Param("userId") userId: string) {

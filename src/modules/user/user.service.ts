@@ -88,7 +88,13 @@ export class UserService {
 			};
 			const command = new ScanCommand(params);
 			const { Items } = await dbClient.send(command);
-			return Items as User[];
+
+			// Exclude password hash from items
+			const adjustedUsers = Items.map((user) => {
+				const { passwordHash, ...userWithoutPassword } = user;
+				return userWithoutPassword;
+			});
+			return adjustedUsers as User[];
 		} catch (error) {
 			console.error("DynamoDB Error:", error); // Log the actual error message
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to get all users");
@@ -107,8 +113,11 @@ export class UserService {
 			};
 			const command = new GetCommand(params);
 			const { Item } = await dbClient.send(command);
+
 			if (!Item) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
-			return Item as User;
+			// Exclude password hash from item
+			const { passwordHash, ...userWithoutPassword } = Item;
+			return userWithoutPassword as User;
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to find user");
