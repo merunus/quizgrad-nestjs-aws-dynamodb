@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { CreateUserDto } from "../../dto/create-user-dto";
 import { hashPassword } from "../../utils/hashPassword";
@@ -21,11 +21,11 @@ import { throwHttpException } from "../../utils/throwHttpException";
 import { RESPONSE_TYPES } from "../models/responseTypes";
 import { TDynamoDBKeys } from "../../types/dynamodb";
 import { S3storageService } from "../../modules/s3storage/s3storage.service";
-import { PutObjectCommandInput, PutObjectCommand } from "@aws-sdk/client-s3";
 import { S3_STORAGE_BASE_URL } from "../../constants/core.constants";
 import { GSIIndexes } from "../models/GSI-indexes";
 import { TokenService } from "../token/token.service";
 import { s3StorageFolders } from "../models/s3StorageFolders";
+import { CustomLogger, createLogger } from "src/utils/logger";
 
 @Injectable()
 export class UserService {
@@ -33,7 +33,11 @@ export class UserService {
 		private readonly dynamodbService: DynamodbService,
 		private readonly s3storageService: S3storageService,
 		private tokenService: TokenService
-	) {}
+	) {
+		this.logger = createLogger("Users service", true);
+	}
+
+	private logger: CustomLogger;
 
 	async handleCreateUser({ email, password, username }: CreateUserDto) {
 		const isUserExist = await this.handleGetUserByEmail(email);
@@ -56,7 +60,6 @@ export class UserService {
 			};
 			// Exclude redundant properties from user return
 			const { SK, PK, passwordHash, ...userPayload } = newUser;
-
 			// Generate tokens
 			const accessToken = this.tokenService.generateAccessToken(userPayload);
 			const refreshToken = this.tokenService.generateRefreshToken(userPayload);
@@ -88,7 +91,6 @@ export class UserService {
 			};
 			const command = new ScanCommand(params);
 			const { Items } = await dbClient.send(command);
-
 			// Exclude password hash from items
 			const adjustedUsers = Items.map((user) => {
 				const { passwordHash, ...userWithoutPassword } = user;
