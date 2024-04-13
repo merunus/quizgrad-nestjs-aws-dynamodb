@@ -40,7 +40,11 @@ export class S3storageService {
 			const saveAvatarCommand = new PutObjectCommand(params);
 			await this.s3Client.send(saveAvatarCommand);
 		} catch (error) {
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to save image to s3 storage");
+			console.log(error);
+			throwHttpException(
+				RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to save image to s3 storage ${error}`
+			);
 		}
 	}
 
@@ -53,7 +57,10 @@ export class S3storageService {
 			// Delete the file from the S3 storage
 			await this.s3Client.send(new DeleteObjectCommand(params));
 		} catch (error) {
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to remove image from s3 storage");
+			throwHttpException(
+				RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to remove image from s3 storage ${error}`
+			);
 		}
 	}
 
@@ -64,7 +71,11 @@ export class S3storageService {
 		const urlParts = url.split("/");
 		// Get the last part of the URL
 		const fileKey = urlParts.pop();
-		if (!fileKey) throw new Error("Invalid URL: cannot extract file key");
+		if (!fileKey)
+			throwHttpException(
+				RESPONSE_TYPES.SERVER_ERROR,
+				`Invalid URL ${fileKey}: cannot extract file key`
+			);
 		return fileKey;
 	}
 }

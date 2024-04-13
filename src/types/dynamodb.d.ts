@@ -1,4 +1,4 @@
-export type TDynamoDBKeys = {
+type TDynamoDBKeys = {
 	PK: string;
 	SK?: string;
 };
