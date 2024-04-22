@@ -16,12 +16,12 @@ import {
 	QueryCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { throwHttpException } from "../../utils/throwHttpException";
-import { RESPONSE_TYPES } from "../models/responseTypes";
+import { RESPONSE_TYPES } from "../../models/responseTypes";
 import { S3storageService } from "../../modules/s3storage/s3storage.service";
 import { S3_STORAGE_BASE_URL } from "../../constants/core.constants";
-import { GSIIndexes } from "../models/GSI-indexes";
+import { GSIIndexes } from "../../models/GSI-indexes";
 import { TokenService } from "../token/token.service";
-import { s3StorageFolders } from "../models/s3StorageFolders";
+import { s3StorageFolders } from "../../models/s3StorageFolders";
 import { CustomLogger, createLogger } from "src/utils/logger";
 
 @Injectable()
@@ -35,6 +35,41 @@ export class UserService {
 	}
 
 	private logger: CustomLogger;
+
+	async handleCreateGoogleUser({ email, name, sub: googleId }: GoogleUserInfo) {
+		try {
+			const userId = uuid();
+			const newUser: GoogleUser & TDynamoDBKeys = {
+				PK: `USER#${userId}`, // Partition key
+				SK: `#METADATA#${userId}`, // Sort key
+				createdAt: new Date().toISOString(),
+				email,
+				username: name, // User full name from google info
+				userId,
+				googleId // Add google user id
+			};
+			const commandInput: PutCommandInput = {
+				TableName: process.env.DYNAMODB_TABLE_NAME,
+				Item: newUser
+			};
+			// Exclude redundant properties from user return
+			const { SK, PK, ...userPayload } = newUser;
+			// Generate tokens
+			const accessToken = this.tokenService.generateAccessToken(userPayload);
+			const refreshToken = this.tokenService.generateRefreshToken(userPayload);
+
+			// Save user to database
+			await this.dynamodbService.sendPutCommand(commandInput);
+			return {
+				user: userPayload,
+				accessToken,
+				refreshToken
+			};
+		} catch (error) {
+			if (error?.response) throw error;
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to create google user`);
+		}
+	}
 
 	async handleCreateUser({ email, password, username }: CreateUserDto) {
 		// Check if user with such email already exist
@@ -71,10 +106,10 @@ export class UserService {
 			};
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create user");
+			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to create user`);
 		}
 	}
-	
+
 	async handleGetAllUsers(): Promise<User[]> {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
@@ -123,7 +158,7 @@ export class UserService {
 		}
 	}
 
-	async handleGetUserByEmail(userEmail: string): Promise<User> {
+	async handleGetUserByEmail(userEmail: string): Promise<User | GoogleUser> {
 		try {
 			const dbClient = this.dynamodbService.getDynamoDbClient();
 			const params: QueryCommandInput = {
@@ -136,7 +171,7 @@ export class UserService {
 			};
 			const command = new QueryCommand(params);
 			const { Items } = await dbClient.send(command);
-			return Items[0] as User;
+			return Items[0] as User | GoogleUser;
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to find with email ${userEmail}`);

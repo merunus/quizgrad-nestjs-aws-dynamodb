@@ -6,7 +6,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { Injectable } from "@nestjs/common";
 import { throwHttpException } from "src/utils/throwHttpException";
-import { RESPONSE_TYPES } from "../models/responseTypes";
+import { RESPONSE_TYPES } from "../../models/responseTypes";
 
 @Injectable()
 export class S3storageService {

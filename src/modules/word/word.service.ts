@@ -8,15 +8,15 @@ import {
 	PutCommandInput,
 	UpdateCommandInput
 } from "@aws-sdk/lib-dynamodb";
-import { s3StorageFolders } from "../models/s3StorageFolders";
+import { s3StorageFolders } from "../../models/s3StorageFolders";
 import { S3storageService } from "../s3storage/s3storage.service";
 import { throwHttpException } from "src/utils/throwHttpException";
-import { RESPONSE_TYPES } from "../models/responseTypes";
+import { RESPONSE_TYPES } from "../../models/responseTypes";
 import {
 	DB_BATCH_COMMAND_WRITE_MAX_ITEMS_AMOUNT,
 	S3_STORAGE_BASE_URL
 } from "src/constants/core.constants";
-import { GSIIndexes } from "../models/GSI-indexes";
+import { GSIIndexes } from "../../models/GSI-indexes";
 import { UpdateWordDto } from "src/dto/update-word-dto";
 
 @Injectable()

@@ -2,9 +2,14 @@ import { NestFactory } from "@nestjs/core";
 import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 import { throwHttpException } from "./utils/throwHttpException";
-import { RESPONSE_TYPES } from "./modules/models/responseTypes";
+import { RESPONSE_TYPES } from "./models/responseTypes";
 import { formatValidationErrors } from "./utils/formatValidationErrors";
-import { allowedCorsOrigins } from "./constants/core.constants";
+
+export const allowedCorsOrigins = [
+	process.env.VERCEL_ORIGIN_URL, // Deployed URL
+	"http://localhost:3000", // Development
+	"http://localhost:4444" // Development
+];
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
@@ -13,7 +18,7 @@ async function bootstrap() {
 		origin: allowedCorsOrigins,
 		credentials: true
 	});
-	
+
 	app.useGlobalPipes(
 		new ValidationPipe({
 			exceptionFactory: (errors) => {

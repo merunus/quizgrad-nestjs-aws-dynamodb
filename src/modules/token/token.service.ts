@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { JsonWebTokenError, JwtService, TokenExpiredError } from "@nestjs/jwt";
 import { throwHttpException } from "../../utils/throwHttpException";
-import { RESPONSE_TYPES } from "../models/responseTypes";
+import { RESPONSE_TYPES } from "../../models/responseTypes";
 
 @Injectable()
 export class TokenService {

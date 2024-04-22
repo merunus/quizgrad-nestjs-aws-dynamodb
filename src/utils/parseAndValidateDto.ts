@@ -6,7 +6,7 @@ import { ClassConstructor, plainToInstance } from "class-transformer";
 import { ValidatorOptions, validate } from "class-validator";
 import { formatValidationErrors } from "./formatValidationErrors";
 import { throwHttpException } from "./throwHttpException";
-import { RESPONSE_TYPES } from "src/modules/models/responseTypes";
+import { RESPONSE_TYPES } from "src/models/responseTypes";
 
 type ExistingDtoTypes = CreateSetDto | CreateUserDto | CreateWordDto | UpdateSetDto;
 

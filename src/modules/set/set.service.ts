@@ -10,7 +10,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { throwHttpException } from "src/utils/throwHttpException";
-import { RESPONSE_TYPES } from "../models/responseTypes";
+import { RESPONSE_TYPES } from "../../models/responseTypes";
 import { plainToInstance } from "class-transformer";
 import { CreateSetDto } from "src/dto/create-set-dto";
 import { validate } from "class-validator";
@@ -18,7 +18,7 @@ import { formatValidationErrors } from "src/utils/formatValidationErrors";
 import { UserService } from "../user/user.service";
 import { WordService } from "../word/word.service";
 import { v4 as uuid } from "uuid";
-import { GSIIndexes } from "../models/GSI-indexes";
+import { GSIIndexes } from "../../models/GSI-indexes";
 import { parseAndValidateDto } from "src/utils/parseAndValidateDto";
 import { UpdateSetDto } from "src/dto/update-set-dto";
 

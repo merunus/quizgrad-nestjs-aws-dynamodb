@@ -16,7 +16,7 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { Injectable } from "@nestjs/common";
 import { throwHttpException } from "src/utils/throwHttpException";
-import { RESPONSE_TYPES } from "../models/responseTypes";
+import { RESPONSE_TYPES } from "../../models/responseTypes";
 
 @Injectable()
 export class DynamodbService {

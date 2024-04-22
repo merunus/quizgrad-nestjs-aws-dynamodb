@@ -1,4 +1,4 @@
 export enum EStrategies {
 	JWT = "jwt",
-	REFRESH_JWT = "jwt-refresh"
+	REFRESH_JWT = "jwt-refresh",
 }
