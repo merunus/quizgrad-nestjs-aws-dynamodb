@@ -16,7 +16,7 @@ export class AuthService {
 		private tokenService: TokenService
 	) {}
 
-	async validateUser(email: string, pass: string): Promise<Omit<User, "passwordHash"> | null> {
+	async validateUser(email: string, pass: string): Promise<BaseUser | null> {
 		const user = await this.userService.handleGetUserByEmail(email);
 		const isDefaultUser = !isGoogleUser(user);
 
@@ -28,8 +28,7 @@ export class AuthService {
 				"It looks like you signed up using Google. Please use Google to log in."
 			);
 
-		const isPasswordValid =
-			user && isDefaultUser && (await bcrypt.compare(pass, user.passwordHash));
+		const isPasswordValid = await bcrypt.compare(pass, (user as User).passwordHash);
 
 		if (!user || !isPasswordValid) {
 			throwHttpException(RESPONSE_TYPES.UNAUTHORIZED, "Invalid credentials");
@@ -39,7 +38,7 @@ export class AuthService {
 		return authenticatedUser;
 	}
 
-	async login(user: Omit<User, "passwordHash">) {
+	async login(user: BaseUser) {
 		return {
 			accessToken: this.tokenService.generateAccessToken(user),
 			refreshToken: this.tokenService.generateRefreshToken(user)
@@ -51,9 +50,11 @@ export class AuthService {
 			const googleUserInfo: GoogleUserInfo = await this.fetchGoogleUserProfile(accessToken);
 			const existingUser = await this.userService.handleGetUserByEmail(googleUserInfo.email);
 			// If user is not registered
-			if (!existingUser) return this.userService.handleCreateGoogleUser(googleUserInfo);
+			if (!existingUser) {
+				return this.userService.handleCreateGoogleUser(googleUserInfo);
+			}
 			// If user already exist with such email
-			else return this.login(existingUser);
+			return this.login(existingUser);
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(
@@ -69,6 +70,7 @@ export class AuthService {
 			const response = await axios.get(googleApiUrl);
 			return response.data; // Contains email, name, picture, etc.
 		} catch (error) {
+			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to fetch user google info`);
 		}
 	}

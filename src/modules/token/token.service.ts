@@ -16,15 +16,13 @@ export class TokenService {
 		throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to verify refresh token");
 	}
 
-	generateAccessToken(user: Omit<User, "passwordHash">) {
-		const payload = { sub: user.userId };
-		return this.jwtService.sign(payload, {
-			
-		});
+	generateAccessToken(user: BaseUser) {
+		const payload = { sub: user.userUuid };
+		return this.jwtService.sign(payload, {});
 	}
 
-	generateRefreshToken(user: Omit<User, "passwordHash">) {
-		const payload = { sub: user.userId };
+	generateRefreshToken(user: BaseUser) {
+		const payload = { sub: user.userUuid };
 		return this.jwtService.sign(payload, {
 			secret: process.env.REFRESH_JWT_SECRET,
 			expiresIn: process.env.REFRESH_TOKEN_EXPIRE

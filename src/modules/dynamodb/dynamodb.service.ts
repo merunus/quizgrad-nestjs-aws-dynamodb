@@ -1,4 +1,4 @@
-import { DynamoDBClient, ListTablesCommand } from "@aws-sdk/client-dynamodb";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import {
 	BatchWriteCommand,
 	BatchWriteCommandInput,
@@ -33,19 +33,6 @@ export class DynamodbService {
 		});
 		// This client simplifies working with DynamoDB by allowing work directly with js objects.
 		this.dynamoDbClient = DynamoDBDocumentClient.from(client);
-	}
-
-	async listTables(): Promise<string[]> {
-		// Command to list all the tables
-		const command = new ListTablesCommand({}); // Listing tables doesn't require any params
-		try {
-			// Send command to db
-			const results = await this.dynamoDbClient.send(command);
-			// TableNames, an array of table names, from the result.
-			return results.TableNames;
-		} catch (error) {
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to list all the tables: ${error}`);
-		}
 	}
 
 	getDynamoDbClient(): DynamoDBDocumentClient {

@@ -1,13 +1,15 @@
-type User = {
+type BaseUser = {
 	email: string;
 	username: string;
-	passwordHash: string;
 	avatarUrl?: string | null;
 	createdAt: string;
-	userId: string;
+	userUuid: string;
 };
 
-type GoogleUser = Omit<User, "passwordHash"> & { googleId: number };
+// Default user with password
+type User = BaseUser & { passwordHash: string };
+// Google user with google id
+type GoogleUser = BaseUser & { googleId: number };
 
 type GoogleUserInfo = {
 	sub: number;

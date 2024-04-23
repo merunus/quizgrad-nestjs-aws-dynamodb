@@ -38,14 +38,14 @@ export class UserService {
 
 	async handleCreateGoogleUser({ email, name, sub: googleId }: GoogleUserInfo) {
 		try {
-			const userId = uuid();
+			const userUuid = uuid();
 			const newUser: GoogleUser & TDynamoDBKeys = {
-				PK: `USER#${userId}`, // Partition key
-				SK: `#METADATA#${userId}`, // Sort key
+				PK: `USER#${userUuid}`, // Partition key
+				SK: `#METADATA#${userUuid}`, // Sort key
 				createdAt: new Date().toISOString(),
 				email,
 				username: name, // User full name from google info
-				userId,
+				userUuid,
 				googleId // Add google user id
 			};
 			const commandInput: PutCommandInput = {
@@ -61,7 +61,6 @@ export class UserService {
 			// Save user to database
 			await this.dynamodbService.sendPutCommand(commandInput);
 			return {
-				user: userPayload,
 				accessToken,
 				refreshToken
 			};
@@ -77,15 +76,15 @@ export class UserService {
 		if (user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User ${email} already exist`);
 
 		try {
-			const userId = uuid();
+			const userUuid = uuid();
 			const newUser: User & TDynamoDBKeys = {
-				PK: `USER#${userId}`, // Partition key
-				SK: `#METADATA#${userId}`, // Sort key
+				PK: `USER#${userUuid}`, // Partition key
+				SK: `#METADATA#${userUuid}`, // Sort key
 				createdAt: new Date().toISOString(),
 				email,
 				username,
 				passwordHash: await hashPassword(password),
-				userId
+				userUuid
 			};
 			const commandInput: PutCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
@@ -100,7 +99,6 @@ export class UserService {
 			// Save user to database
 			await this.dynamodbService.sendPutCommand(commandInput);
 			return {
-				user: userPayload,
 				accessToken,
 				refreshToken
 			};
