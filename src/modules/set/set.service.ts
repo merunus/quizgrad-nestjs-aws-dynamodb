@@ -1,20 +1,15 @@
 import { Injectable } from "@nestjs/common";
 import {
-	BatchWriteCommandInput,
 	DeleteCommandInput,
 	PutCommandInput,
 	QueryCommandInput,
-	ScanCommand,
 	ScanCommandInput,
 	UpdateCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { throwHttpException } from "src/utils/throwHttpException";
 import { RESPONSE_TYPES } from "../../models/responseTypes";
-import { plainToInstance } from "class-transformer";
 import { CreateSetDto } from "src/dto/create-set-dto";
-import { validate } from "class-validator";
-import { formatValidationErrors } from "src/utils/formatValidationErrors";
 import { UserService } from "../user/user.service";
 import { WordService } from "../word/word.service";
 import { v4 as uuid } from "uuid";
@@ -56,7 +51,10 @@ export class SetService {
 
 			return setsWithWords;
 		} catch (error) {
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to get all sets");
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				"Failed to get all sets"
+			);
 		}
 	}
 
@@ -99,7 +97,10 @@ export class SetService {
 			return { newSet, words: wordsOfTheSet };
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to create set");
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				"Failed to create set"
+			);
 		}
 	}
 
@@ -163,7 +164,7 @@ export class SetService {
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(
-				RESPONSE_TYPES.SERVER_ERROR,
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				`Failed to update user set and its words: ${error}`
 			);
 		}
@@ -189,7 +190,10 @@ export class SetService {
 			return "Set and its words were successfully deleted";
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete set and its words");
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				"Failed to delete set and its words"
+			);
 		}
 	}
 

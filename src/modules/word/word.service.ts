@@ -43,8 +43,10 @@ export class WordService {
 			const words = await this.dynamodbService.sendQueryCommand<Word[]>(commandInput);
 			return words as (Word & TDynamoDBKeys)[];
 		} catch (error) {
-			console.error(`Error querying words by setId: ${error}`);
-			throw error;
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to get words of a set : ${error}`
+			);
 		}
 	}
 
@@ -64,8 +66,10 @@ export class WordService {
 				throwHttpException(RESPONSE_TYPES.NOT_FOUND, `Word with id ${wordId} doesn't exist`);
 			return results[0] as Word & TDynamoDBKeys;
 		} catch (error) {
-			console.error(`Error querying word by ID: ${error}`);
-			throw error;
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to get word by id : ${error}`
+			);
 		}
 	}
 
@@ -77,7 +81,7 @@ export class WordService {
 			return fileURL;
 		} catch (error) {
 			throwHttpException(
-				RESPONSE_TYPES.SERVER_ERROR,
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				`Failed to save word image to s3 storage: ${error}`
 			);
 		}
@@ -92,7 +96,10 @@ export class WordService {
 			await this.dynamodbService.sendPutCommand(commandInput);
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to save word to database : ${error}`);
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to save word to database : ${error}`
+			);
 		}
 	}
 
@@ -146,10 +153,14 @@ export class WordService {
 			return await this.dynamodbService.sendUpdateCommand(updateInput);
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to update word : ${error}`);
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to update word : ${error}`
+			);
 		}
 	}
 
+	// From body files get the image url
 	private async handleGetWordImageUrlFromUploadedFiles(
 		files: Express.Multer.File[],
 		wordIndex: number,
@@ -211,6 +222,7 @@ export class WordService {
 			);
 			await this.handleDeleteWordsInBatches(wordsForDelete, setId);
 
+			// Update each word from dto
 			for (let i = 0; i < wordsDto.length; i++) {
 				const wordDto = wordsDto[i];
 				const existingWord = existingWords.find(
@@ -246,7 +258,10 @@ export class WordService {
 			}
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to update words of set : ${error}`);
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to update words of set : ${error}`
+			);
 		}
 	}
 
@@ -309,7 +324,10 @@ export class WordService {
 			}
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete words batch");
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				"Failed to delete words batch"
+			);
 		}
 	}
 
@@ -334,7 +352,10 @@ export class WordService {
 			return "Successfully uploaded an image to the word";
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to upload word image");
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				"Failed to upload word image"
+			);
 		}
 	}
 }

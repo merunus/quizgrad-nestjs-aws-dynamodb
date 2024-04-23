@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
 import { CreateUserDto } from "../../dto/create-user-dto";
 import { hashPassword } from "../../utils/hashPassword";
@@ -66,7 +66,10 @@ export class UserService {
 			};
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to create google user`);
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to create google user`
+			);
 		}
 	}
 
@@ -104,7 +107,10 @@ export class UserService {
 			};
 		} catch (error) {
 			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to create user`);
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to create user`
+			);
 		}
 	}
 
@@ -129,7 +135,10 @@ export class UserService {
 			});
 			return adjustedUsers as User[];
 		} catch (error) {
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to get all users");
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				"Failed to get all users"
+			);
 		}
 	}
 

@@ -4,7 +4,7 @@ import { UserService } from "../user/user.service";
 import { throwHttpException } from "../../utils/throwHttpException";
 import { TokenService } from "../token/token.service";
 import { RESPONSE_TYPES } from "../../models/responseTypes";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { GOOGLE_USER_API_URL } from "src/constants/core.constants";
 import { GoogleLoginDto } from "src/dto/google-login.dto";
 import { isGoogleUser } from "src/guards/isGoogleUser";
@@ -58,7 +58,7 @@ export class AuthService {
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(
-				RESPONSE_TYPES.SERVER_ERROR,
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				`Failed to authenticate with Google : ${error}`
 			);
 		}
@@ -70,8 +70,13 @@ export class AuthService {
 			const response = await axios.get(googleApiUrl);
 			return response.data; // Contains email, name, picture, etc.
 		} catch (error) {
-			if (error?.response) throw error;
-			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to fetch user google info`);
+			if (error instanceof AxiosError) {
+				console.log("axios error");
+			}
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to fetch user google info`
+			);
 		}
 	}
 }
