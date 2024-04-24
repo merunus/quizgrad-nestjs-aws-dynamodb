@@ -2,11 +2,11 @@ This is documentation for the single-table in my DynamoDB database
 
 
 User element:
-PK: USER#<UserId>
-SK: #METADATA#<UserId>
+PK: USER#<UserUuid>
+SK: #METADATA#<UserUuid>
 
 Set element (owned by users):
-PK: USER#<UserId> (to group sets by their owner)
+PK: USER#<UserUuid> (to group sets by their owner)
 SK: SET#<SetId>
 
 Word element (belonging to sets):

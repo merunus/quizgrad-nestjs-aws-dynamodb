@@ -5,6 +5,8 @@ import {
 	DeleteCommand,
 	DeleteCommandInput,
 	DynamoDBDocumentClient,
+	GetCommand,
+	GetCommandInput,
 	PutCommand,
 	PutCommandInput,
 	QueryCommand,
@@ -37,6 +39,18 @@ export class DynamodbService {
 
 	getDynamoDbClient(): DynamoDBDocumentClient {
 		return this.dynamoDbClient;
+	}
+
+	async sendGetCommand(commandInput: GetCommandInput) {
+		try {
+			const { Item } = await this.dynamoDbClient.send(new GetCommand(commandInput));
+			return Item;
+		} catch (error) {
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to put element to the dynamodb table: ${error}`
+			);
+		}
 	}
 
 	async sendPutCommand(commandInput: PutCommandInput) {
@@ -91,7 +105,10 @@ export class DynamodbService {
 			const { Items } = await this.dynamoDbClient.send(new ScanCommand(commandInput));
 			return Items as T;
 		} catch (error) {
-			throwHttpException(error?.response?.status || RESPONSE_TYPES.SERVER_ERROR, `Failed to scan database table: ${error}`);
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to scan database table: ${error}`
+			);
 		}
 	}
 
@@ -100,7 +117,10 @@ export class DynamodbService {
 			const response = await this.dynamoDbClient.send(new BatchWriteCommand(commandInput));
 			return response;
 		} catch (error) {
-			throwHttpException(error?.response?.status || RESPONSE_TYPES.SERVER_ERROR, "Failed during batch write operation");
+			throwHttpException(
+				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+				"Failed during batch write operation"
+			);
 		}
 	}
 }

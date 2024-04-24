@@ -116,8 +116,7 @@ export class UserService {
 
 	async handleGetAllUsers(): Promise<User[]> {
 		try {
-			const dbClient = this.dynamodbService.getDynamoDbClient();
-			const params: ScanCommandInput = {
+			const commandInput: ScanCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				// Include an additional condition to filter only items where SK begins with "#METADATA#"
 				FilterExpression: "begins_with(PK, :pkval) AND begins_with(SK, :skval)",
@@ -126,10 +125,9 @@ export class UserService {
 					":skval": "#METADATA#"
 				}
 			};
-			const command = new ScanCommand(params);
-			const { Items } = await dbClient.send(command);
+			const users = await this.dynamodbService.sendScanCommand<User[]>(commandInput);
 			// Exclude password hash from items
-			const adjustedUsers = Items.map((user) => {
+			const adjustedUsers = users.map((user) => {
 				const { passwordHash, ...userWithoutPassword } = user;
 				return userWithoutPassword;
 			});
@@ -142,22 +140,19 @@ export class UserService {
 		}
 	}
 
-	async handleGetUserById(userId: string): Promise<User> {
+	async handleGetUserById(userUuid: string): Promise<User> {
 		try {
-			const dbClient = this.dynamodbService.getDynamoDbClient();
-			const params: GetCommandInput = {
+			const commandInput: GetCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Key: {
-					PK: `USER#${userId}`,
-					SK: `#METADATA#${userId}`
+					PK: `USER#${userUuid}`,
+					SK: `#METADATA#${userUuid}`
 				}
 			};
-			const command = new GetCommand(params);
-			const { Item } = await dbClient.send(command);
-
-			if (!Item) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
+			const user = await this.dynamodbService.sendGetCommand(commandInput);
+			if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userUuid} not found`);
 			// Exclude password hash from item
-			const { passwordHash, ...userWithoutPassword } = Item;
+			const { passwordHash, ...userWithoutPassword } = user;
 			return userWithoutPassword as User;
 		} catch (error) {
 			if (error?.response) throw error;
@@ -167,8 +162,7 @@ export class UserService {
 
 	async handleGetUserByEmail(userEmail: string): Promise<User | GoogleUser> {
 		try {
-			const dbClient = this.dynamodbService.getDynamoDbClient();
-			const params: QueryCommandInput = {
+			const commandInput: QueryCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				IndexName: GSIIndexes.UsersByEmail,
 				KeyConditionExpression: "email = :userEmail",
@@ -176,23 +170,22 @@ export class UserService {
 					":userEmail": userEmail
 				}
 			};
-			const command = new QueryCommand(params);
-			const { Items } = await dbClient.send(command);
-			return Items[0] as User | GoogleUser;
+			const items = await this.dynamodbService.sendQueryCommand<User[]>(commandInput);
+			return items[0] as User | GoogleUser;
 		} catch (error) {
 			if (error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to find with email ${userEmail}`);
 		}
 	}
 
-	async handleUpdateUserAvatarProperty(userId: string, avatarUrl: string) {
+	async handleUpdateUserAvatarProperty(userUuid: string, avatarUrl: string) {
 		try {
 			// Update user avatarUrl property in the database
-			const updateParams: UpdateCommandInput = {
+			const commandInput: UpdateCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Key: {
-					PK: `USER#${userId}`,
-					SK: `#METADATA#${userId}`
+					PK: `USER#${userUuid}`,
+					SK: `#METADATA#${userUuid}`
 				},
 				UpdateExpression: "set avatarUrl = :avatarUrl",
 				ExpressionAttributeValues: {
@@ -200,27 +193,24 @@ export class UserService {
 				},
 				ReturnValues: "UPDATED_NEW"
 			};
-
-			const dynamoDbClient = this.dynamodbService.getDynamoDbClient();
-			const updateUserAvatarCommand = new UpdateCommand(updateParams);
-			await dynamoDbClient.send(updateUserAvatarCommand);
+			await this.dynamodbService.sendUpdateCommand(commandInput);
 		} catch (error) {
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to update user avatar property");
 		}
 	}
 
-	async handleUserAvatarUpload(file: Express.Multer.File, userId: string) {
-		if (!userId) throwHttpException(RESPONSE_TYPES.BAD_REQUEST, "User id must be provided");
+	async handleUserAvatarUpload(file: Express.Multer.File, userUuid: string) {
+		if (!userUuid) throwHttpException(RESPONSE_TYPES.BAD_REQUEST, "User id must be provided");
 		if (!file) throwHttpException(RESPONSE_TYPES.BAD_REQUEST, "User avatar must be provided");
 
 		// Check if user with passed id exist
-		const targetUser = await this.handleGetUserById(userId);
+		const targetUser = await this.handleGetUserById(userUuid);
 		if (!targetUser)
-			throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
+			throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userUuid} not found`);
 
 		try {
 			// Construct unique file key
-			const fileKey = `${s3StorageFolders.AVATARS}/avatar_${userId}}`;
+			const fileKey = `${s3StorageFolders.AVATARS}/avatar_${userUuid}}`;
 
 			// Save image to s3 storage
 			await this.s3storageService.saveImageToStorage(fileKey, file);
@@ -236,7 +226,7 @@ export class UserService {
 			// Construct the URL of the uploaded avatar
 			const avatarUrl = `${S3_STORAGE_BASE_URL}/${fileKey}`;
 
-			await this.handleUpdateUserAvatarProperty(userId, avatarUrl);
+			await this.handleUpdateUserAvatarProperty(userUuid, avatarUrl);
 
 			return avatarUrl;
 		} catch (error) {
@@ -245,13 +235,13 @@ export class UserService {
 		}
 	}
 
-	async handleDeleteUser(userId: string) {
+	async handleDeleteUser(userUuid: string) {
 		try {
 			const commandInput: DeleteCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Key: {
-					PK: `USER#${userId}`,
-					SK: `#METADATA#${userId}`
+					PK: `USER#${userUuid}`,
+					SK: `#METADATA#${userUuid}`
 				}
 			};
 			await this.dynamodbService.sendDeleteCommand(commandInput);
@@ -262,15 +252,15 @@ export class UserService {
 		}
 	}
 
-	async handleDeleteUserAvatar(userId: string) {
-		const user = await this.handleGetUserById(userId);
-		if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
+	async handleDeleteUserAvatar(userUuid: string) {
+		const user = await this.handleGetUserById(userUuid);
+		if (!user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userUuid} not found`);
 
 		if (!user?.avatarUrl)
 			throwHttpException(RESPONSE_TYPES.NOT_FOUND, "User doesn't have an avatar");
 
 		try {
-			await this.handleUpdateUserAvatarProperty(userId, "");
+			await this.handleUpdateUserAvatarProperty(userUuid, "");
 			await this.s3storageService.removeFileFromStorage(user.avatarUrl, s3StorageFolders.AVATARS);
 
 			return "User avatar was successfully deleted";

@@ -36,33 +36,34 @@ export class UserController {
 	@UseGuards(JwtAuthGuard)
 	@UseInterceptors(FileInterceptor("avatar", multerImageUploadConfig))
 	async uploadUserAvatar(@UploadedFile() file: Express.Multer.File, @Req() req) {
-		const userId = req.user.userId;
-		return await this.userService.handleUserAvatarUpload(file, userId);
+		const userUuid = req.user.userUuid;
+		return await this.userService.handleUserAvatarUpload(file, userUuid);
 	}
 
 	@Delete("avatar")
 	@UseGuards(JwtAuthGuard)
 	async deleteUserAvatar(@Req() req) {
-		const userId = req.user.userId;
-		return await this.userService.handleDeleteUserAvatar(userId);
+		const userUuid = req.user.userUuid;
+		return await this.userService.handleDeleteUserAvatar(userUuid);
 	}
 
 	@Get("me")
 	@UseGuards(JwtAuthGuard)
 	async getMyUser(@Req() req) {
-		const userId = req.user.userId;
-		return await this.userService.handleGetUserById(userId);
+		console.log(req.user);
+		const userUuid = req.user.userUuid;
+		return await this.userService.handleGetUserById(userUuid);
 	}
 
-	@Get(":userId")
+	@Get(":userUuid")
 	@UseGuards(JwtAuthGuard)
-	async getUserById(@Param("userId") userId: string) {
-		return await this.userService.handleGetUserById(userId);
+	async getUserById(@Param("userUuid") userUuid: string) {
+		return await this.userService.handleGetUserById(userUuid);
 	}
 
-	@Delete(":userId")
+	@Delete(":userUuid")
 	@UseGuards(JwtAuthGuard)
-	async deleteUser(@Param("userId") userId: string) {
-		return await this.userService.handleDeleteUser(userId);
+	async deleteUser(@Param("userUuid") userUuid: string) {
+		return await this.userService.handleDeleteUser(userUuid);
 	}
 }

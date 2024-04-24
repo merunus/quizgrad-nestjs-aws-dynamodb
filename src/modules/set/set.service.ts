@@ -59,7 +59,7 @@ export class SetService {
 	}
 
 	async handleCreateUserSet(
-		userId: string,
+		userUuid: string,
 		createSetDtoString: string,
 		files: Array<Express.Multer.File>
 	) {
@@ -67,9 +67,9 @@ export class SetService {
 		const createSetDto = await parseAndValidateDto<CreateSetDto>(createSetDtoString, CreateSetDto);
 
 		// Get the user id from the JWT guard by token
-		const setCreator = await this.userService.handleGetUserById(userId);
+		const setCreator = await this.userService.handleGetUserById(userUuid);
 		if (!setCreator) {
-			throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userId} not found`);
+			throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User with id ${userUuid} not found`);
 		}
 		try {
 			const setId = uuid();
@@ -77,7 +77,7 @@ export class SetService {
 			await this.wordService.handleSaveWordsOfSet(createSetDto.words, files, setId);
 
 			const newSet: LearningSet & TDynamoDBKeys = {
-				PK: `USER#${userId}`,
+				PK: `USER#${userUuid}`,
 				SK: `SET#${setId}`,
 				createdAt: new Date().toISOString(),
 				language: createSetDto.language,
@@ -105,7 +105,7 @@ export class SetService {
 	}
 
 	async handleUpdateUserSet(
-		userId: string,
+		userUuid: string,
 		updateSetDtoString: string,
 		files: Array<Express.Multer.File>
 	) {
@@ -123,7 +123,7 @@ export class SetService {
 					RESPONSE_TYPES.NOT_FOUND,
 					`Set with id ${updateSetDto.setId} doesn't exist`
 				);
-			if (existingSet.PK !== `USER#${userId}`)
+			if (existingSet.PK !== `USER#${userUuid}`)
 				throwHttpException(
 					RESPONSE_TYPES.CONFLICT,
 					`You don't have permissions to update this set`
@@ -133,7 +133,7 @@ export class SetService {
 			const updateInput: UpdateCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
 				Key: {
-					PK: `USER#${userId}`,
+					PK: `USER#${userUuid}`,
 					SK: `SET#${updateSetDto.setId}`
 				},
 				UpdateExpression: "set #title = :title, #language = :language",
@@ -170,14 +170,14 @@ export class SetService {
 		}
 	}
 
-	async handleDeleteSet(userId: string, setId: string) {
+	async handleDeleteSet(userUuid: string, setId: string) {
 		const set = await this.handleCheckSetExistence(setId);
-		if (set.PK !== `USER#${userId}`)
+		if (set.PK !== `USER#${userUuid}`)
 			throwHttpException(RESPONSE_TYPES.CONFLICT, "You don't have permissions to delete this set");
 		try {
 			const deleteSetCommandInput: DeleteCommandInput = {
 				TableName: process.env.DYNAMODB_TABLE_NAME,
-				Key: { PK: `USER#${userId}`, SK: `SET#${setId}` }
+				Key: { PK: `USER#${userUuid}`, SK: `SET#${setId}` }
 			};
 			// Delete the set itself
 			await this.dynamodbService.sendDeleteCommand(deleteSetCommandInput);

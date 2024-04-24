@@ -47,8 +47,8 @@ export class SetController {
 		@Body("setBody") createSetDtoString: string,
 		@Req() req
 	) {
-		const userId = req.user.userId;
-		return this.setService.handleCreateUserSet(userId, createSetDtoString, files);
+		const userUuid = req.user.userUuid;
+		return this.setService.handleCreateUserSet(userUuid, createSetDtoString, files);
 	}
 
 	@Put()
@@ -60,8 +60,8 @@ export class SetController {
 		@Body("setBody") updateSetDtoString: string,
 		@Req() req
 	) {
-		const userId = req.user.userId;
-		return this.setService.handleUpdateUserSet(userId, updateSetDtoString, files);
+		const userUuid = req.user.userUuid;
+		return this.setService.handleUpdateUserSet(userUuid, updateSetDtoString, files);
 	}
 
 	@Get("words")
@@ -74,6 +74,6 @@ export class SetController {
 	@Delete()
 	@UseGuards(JwtAuthGuard)
 	async deleteSet(@Query("setId") setId: string, @Req() req) {
-		return await this.setService.handleDeleteSet(req.user.userId, setId);
+		return await this.setService.handleDeleteSet(req.user.userUuid, setId);
 	}
 }

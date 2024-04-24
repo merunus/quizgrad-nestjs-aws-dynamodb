@@ -70,9 +70,6 @@ export class AuthService {
 			const response = await axios.get(googleApiUrl);
 			return response.data; // Contains email, name, picture, etc.
 		} catch (error) {
-			if (error instanceof AxiosError) {
-				console.log("axios error");
-			}
 			throwHttpException(
 				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				`Failed to fetch user google info`
