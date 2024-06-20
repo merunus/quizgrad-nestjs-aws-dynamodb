@@ -65,7 +65,6 @@ export class SetService {
 	) {
 		// Validate dto json
 		const createSetDto = await parseAndValidateDto<CreateSetDto>(createSetDtoString, CreateSetDto);
-
 		// Get the user id from the JWT guard by token
 		const setCreator = await this.userService.handleGetUserById(userUuid);
 		if (!setCreator) {
