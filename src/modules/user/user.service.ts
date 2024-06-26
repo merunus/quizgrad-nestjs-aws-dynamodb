@@ -55,8 +55,8 @@ export class UserService {
 			// Exclude redundant properties from user return
 			const { SK, PK, ...userPayload } = newUser;
 			// Generate tokens
-			const accessToken = this.tokenService.generateAccessToken(userPayload);
-			const refreshToken = this.tokenService.generateRefreshToken(userPayload);
+			const accessToken = this.tokenService.generateAccessToken(userPayload.userUuid);
+			const refreshToken = this.tokenService.generateRefreshToken(userPayload.userUuid);
 
 			// Save user to database
 			await this.dynamodbService.sendPutCommand(commandInput);
@@ -96,8 +96,8 @@ export class UserService {
 			// Exclude redundant properties from user return
 			const { SK, PK, passwordHash, ...userPayload } = newUser;
 			// Generate tokens
-			const accessToken = this.tokenService.generateAccessToken(userPayload);
-			const refreshToken = this.tokenService.generateRefreshToken(userPayload);
+			const accessToken = this.tokenService.generateAccessToken(userPayload.userUuid);
+			const refreshToken = this.tokenService.generateRefreshToken(userPayload.userUuid);
 
 			// Save user to database
 			await this.dynamodbService.sendPutCommand(commandInput);

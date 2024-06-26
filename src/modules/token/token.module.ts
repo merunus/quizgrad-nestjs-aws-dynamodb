@@ -10,7 +10,7 @@ config();
 @Module({
 	imports: [
 		JwtModule.register({
-			secret: `${process.env.JWT_SECRET}`,
+			secret: `${process.env.ACCESS_JWT_SECRET}`,
 			signOptions: { expiresIn: process.env.ACCESS_TOKEN_EXPIRE } // Set to a suitable value for access tokens
 		}),
 		PassportModule

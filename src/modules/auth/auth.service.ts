@@ -40,8 +40,8 @@ export class AuthService {
 
 	async login(user: BaseUser) {
 		return {
-			accessToken: this.tokenService.generateAccessToken(user),
-			refreshToken: this.tokenService.generateRefreshToken(user)
+			accessToken: this.tokenService.generateAccessToken(user.userUuid),
+			refreshToken: this.tokenService.generateRefreshToken(user.userUuid)
 		};
 	}
 
