@@ -16,6 +16,7 @@ import { v4 as uuid } from "uuid";
 import { GSIIndexes } from "../../models/GSI-indexes";
 import { parseAndValidateDto } from "src/utils/parseAndValidateDto";
 import { UpdateSetDto } from "src/dto/update-set-dto";
+import { AxiosError } from "axios";
 
 @Injectable()
 export class SetService {
@@ -51,6 +52,7 @@ export class SetService {
 
 			return setsWithWords;
 		} catch (error) {
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(
 				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				"Failed to get all sets"
@@ -95,7 +97,7 @@ export class SetService {
 
 			return { newSet, words: wordsOfTheSet };
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(
 				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				"Failed to create set"
@@ -161,7 +163,7 @@ export class SetService {
 			// Update the set
 			return await this.dynamodbService.sendUpdateCommand(updateInput);
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(
 				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				`Failed to update user set and its words: ${error}`
@@ -188,7 +190,7 @@ export class SetService {
 
 			return "Set and its words were successfully deleted";
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(
 				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				"Failed to delete set and its words"
@@ -215,8 +217,11 @@ export class SetService {
 			const setWords = await this.wordService.handleGetWordsOfSet(set);
 			return { ...set, words: setWords } as LearningSet & TDynamoDBKeys;
 		} catch (error) {
-			console.error("Error querying set by ID:", error);
-			throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
+			throwHttpException(
+				RESPONSE_TYPES.SERVER_ERROR,
+				`Failed to find set by id ${setId} : ${error}`
+			);
 		}
 	}
 }

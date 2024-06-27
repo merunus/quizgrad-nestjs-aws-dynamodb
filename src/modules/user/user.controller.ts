@@ -1,5 +1,4 @@
 import {
-	Body,
 	Controller,
 	Get,
 	Post,
@@ -8,10 +7,8 @@ import {
 	UseGuards,
 	UseInterceptors,
 	UploadedFile,
-	Req,
-	Query
+	Req
 } from "@nestjs/common";
-import { CreateUserDto } from "../../dto/create-user-dto";
 import { UserService } from "./user.service";
 import { JwtAuthGuard } from "../../guards/jwt-auth.guard";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -25,11 +22,6 @@ export class UserController {
 	@UseGuards(JwtAuthGuard)
 	async getAllUsers() {
 		return await this.userService.handleGetAllUsers();
-	}
-
-	@Post("create")
-	async createUser(@Body() createUserDto: CreateUserDto) {
-		return await this.userService.handleCreateUser(createUserDto);
 	}
 
 	@Post("avatar")

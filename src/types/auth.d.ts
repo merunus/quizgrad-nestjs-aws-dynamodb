@@ -7,4 +7,5 @@ type TokenUserPayload = {
 	sub: string;
 	iat: number;
 	exp: number;
+	tokenType: "access" | "refresh";
 };

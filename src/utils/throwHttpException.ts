@@ -14,7 +14,7 @@ export function throwHttpException(type: RESPONSE_TYPES, objectOrError?: any) {
 		case RESPONSE_TYPES.NO_CONTENT:
 			throw new HttpException(objectOrError, RESPONSE_TYPES.NO_CONTENT);
 		case RESPONSE_TYPES.BAD_REQUEST:
-			throw new BadRequestException([objectOrError]);
+			throw new BadRequestException(objectOrError);
 		case RESPONSE_TYPES.UNAUTHORIZED:
 			throw new UnauthorizedException(objectOrError);
 		case RESPONSE_TYPES.FORBIDDEN:

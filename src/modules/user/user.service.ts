@@ -1,18 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
-import { CreateUserDto } from "../../dto/create-user-dto";
-import { hashPassword } from "../../utils/hashPassword";
 import { v4 as uuid } from "uuid";
 import {
-	ScanCommand,
-	GetCommand,
 	UpdateCommandInput,
-	UpdateCommand,
 	DeleteCommandInput,
 	GetCommandInput,
 	ScanCommandInput,
 	PutCommandInput,
-	QueryCommand,
 	QueryCommandInput
 } from "@aws-sdk/lib-dynamodb";
 import { throwHttpException } from "../../utils/throwHttpException";
@@ -23,6 +17,7 @@ import { GSIIndexes } from "../../models/GSI-indexes";
 import { TokenService } from "../token/token.service";
 import { s3StorageFolders } from "../../models/s3StorageFolders";
 import { CustomLogger, createLogger } from "src/utils/logger";
+import { AxiosError } from "axios";
 
 @Injectable()
 export class UserService {
@@ -53,10 +48,9 @@ export class UserService {
 				Item: newUser
 			};
 			// Exclude redundant properties from user return
-			const { SK, PK, ...userPayload } = newUser;
 			// Generate tokens
-			const accessToken = this.tokenService.generateAccessToken(userPayload.userUuid);
-			const refreshToken = this.tokenService.generateRefreshToken(userPayload.userUuid);
+			const accessToken = this.tokenService.generateAccessToken(newUser.userUuid);
+			const refreshToken = this.tokenService.generateRefreshToken(newUser.userUuid);
 
 			// Save user to database
 			await this.dynamodbService.sendPutCommand(commandInput);
@@ -65,51 +59,10 @@ export class UserService {
 				refreshToken
 			};
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(
 				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				`Failed to create google user`
-			);
-		}
-	}
-
-	async handleCreateUser({ email, password, username }: CreateUserDto) {
-		// Check if user with such email already exist
-		const user = await this.handleGetUserByEmail(email);
-		if (user) throwHttpException(RESPONSE_TYPES.NOT_FOUND, `User ${email} already exist`);
-
-		try {
-			const userUuid = uuid();
-			const newUser: User & TDynamoDBKeys = {
-				PK: `USER#${userUuid}`, // Partition key
-				SK: `#METADATA#${userUuid}`, // Sort key
-				createdAt: new Date().toISOString(),
-				email,
-				username,
-				passwordHash: await hashPassword(password),
-				userUuid
-			};
-			const commandInput: PutCommandInput = {
-				TableName: process.env.DYNAMODB_TABLE_NAME,
-				Item: newUser
-			};
-			// Exclude redundant properties from user return
-			const { SK, PK, passwordHash, ...userPayload } = newUser;
-			// Generate tokens
-			const accessToken = this.tokenService.generateAccessToken(userPayload.userUuid);
-			const refreshToken = this.tokenService.generateRefreshToken(userPayload.userUuid);
-
-			// Save user to database
-			await this.dynamodbService.sendPutCommand(commandInput);
-			return {
-				accessToken,
-				refreshToken
-			};
-		} catch (error) {
-			if (error?.response) throw error;
-			throwHttpException(
-				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
-				`Failed to create user`
 			);
 		}
 	}
@@ -133,6 +86,7 @@ export class UserService {
 			});
 			return adjustedUsers as User[];
 		} catch (error) {
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(
 				error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
 				"Failed to get all users"
@@ -155,7 +109,7 @@ export class UserService {
 			const { passwordHash, ...userWithoutPassword } = user;
 			return userWithoutPassword as User;
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to find user");
 		}
 	}
@@ -173,7 +127,7 @@ export class UserService {
 			const items = await this.dynamodbService.sendQueryCommand<User[]>(commandInput);
 			return items[0] as User | GoogleUser;
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, `Failed to find with email ${userEmail}`);
 		}
 	}
@@ -195,6 +149,7 @@ export class UserService {
 			};
 			await this.dynamodbService.sendUpdateCommand(commandInput);
 		} catch (error) {
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to update user avatar property");
 		}
 	}
@@ -230,7 +185,7 @@ export class UserService {
 
 			return avatarUrl;
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to upload user avatar");
 		}
 	}
@@ -247,7 +202,7 @@ export class UserService {
 			await this.dynamodbService.sendDeleteCommand(commandInput);
 			return "User was successfully deleted";
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete user");
 		}
 	}
@@ -265,7 +220,7 @@ export class UserService {
 
 			return "User avatar was successfully deleted";
 		} catch (error) {
-			if (error?.response) throw error;
+			if (error instanceof AxiosError && error?.response) throw error;
 			throwHttpException(RESPONSE_TYPES.SERVER_ERROR, "Failed to delete user avatar");
 		}
 	}
