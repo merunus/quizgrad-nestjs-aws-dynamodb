@@ -6,16 +6,22 @@ import { RESPONSE_TYPES } from "./models/responseTypes";
 import { formatValidationErrors } from "./utils/formatValidationErrors";
 
 export const allowedCorsOrigins = [
-	process.env.VERCEL_ORIGIN_URL, // Deployed URL
-	"http://localhost:3000", // Development
-	"http://localhost:4444" // Development
+	process.env.VERCEL_ORIGIN_URL, // Deployed URL,
+	"https://quizgrad-nextjs.vercel.app/" // Nikita's deployed website
 ];
 
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 
 	app.enableCors({
-		origin: allowedCorsOrigins,
+		origin: (origin, callback) => {
+			const isLocalHost = /^http:\/\/localhost:\d+$/.test(origin);
+			if (!origin || allowedCorsOrigins.includes(origin) || isLocalHost) {
+				callback(null, true);
+			} else {
+				callback(new Error("Not allowed by CORS"));
+			}
+		},
 		credentials: true
 	});
 
