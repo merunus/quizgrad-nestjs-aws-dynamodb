@@ -9,9 +9,9 @@ import { JwtStrategy } from "../../strategies/jwt.strategy";
 import { DynamodbModule } from "../dynamodb/dynamodb.module";
 
 @Module({
-	imports: [UserModule, PassportModule, DynamodbModule, TokenModule],
-	providers: [AuthService, JwtStrategy, JwtModule],
-	controllers: [AuthController],
-	exports: [AuthService]
+  imports: [UserModule, PassportModule, DynamodbModule, TokenModule],
+  providers: [AuthService, JwtStrategy, JwtModule],
+  controllers: [AuthController],
+  exports: [AuthService]
 })
 export class AuthModule {}

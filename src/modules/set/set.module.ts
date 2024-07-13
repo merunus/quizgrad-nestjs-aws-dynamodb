@@ -6,8 +6,9 @@ import { UserModule } from "../user/user.module";
 import { WordModule } from "../word/word.module";
 
 @Module({
-	imports: [DynamodbModule, UserModule, WordModule],
-	providers: [SetService],
-	controllers: [SetController]
+  imports: [DynamodbModule, UserModule, WordModule],
+  providers: [SetService],
+  controllers: [SetController],
+  exports: [SetService]
 })
 export class SetModule {}

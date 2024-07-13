@@ -1,4 +1,4 @@
 type TDynamoDBKeys = {
-	PK: string;
-	SK?: string;
+  PK: string;
+  SK?: string;
 };

@@ -8,15 +8,15 @@ import { PassportModule } from "@nestjs/passport";
 config();
 
 @Module({
-	imports: [
-		JwtModule.register({
-			secret: `${process.env.ACCESS_JWT_SECRET}`,
-			signOptions: { expiresIn: process.env.ACCESS_TOKEN_EXPIRE } // Set to a suitable value for access tokens
-		}),
-		PassportModule
-	],
-	controllers: [TokenController],
-	providers: [TokenService, RefreshJWTStrategy],
-	exports: [TokenService, JwtModule] // Export JwtModule as well
+  imports: [
+    JwtModule.register({
+      secret: `${process.env.ACCESS_JWT_SECRET}`,
+      signOptions: { expiresIn: process.env.ACCESS_TOKEN_EXPIRE } // Set to a suitable value for access tokens
+    }),
+    PassportModule
+  ],
+  controllers: [TokenController],
+  providers: [TokenService, RefreshJWTStrategy],
+  exports: [TokenService, JwtModule] // Export JwtModule as well
 })
 export class TokenModule {}

@@ -5,15 +5,15 @@ import { EStrategies } from "../models/strategies";
 
 @Injectable()
 export class RefreshJWTStrategy extends PassportStrategy(Strategy, EStrategies.REFRESH_JWT) {
-	constructor() {
-		super({
-			jwtFromRequest: ExtractJwt.fromBodyField("refreshToken"),
-			ignoreExpiration: false,
-			secretOrKey: `${process.env.REFRESH_JWT_SECRET}`
-		});
-	}
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromBodyField("refreshToken"),
+      ignoreExpiration: false,
+      secretOrKey: `${process.env.REFRESH_JWT_SECRET}`
+    });
+  }
 
-	async validate(payload: JwtPayload): Promise<Pick<User, "userUuid">> {
-		return { userUuid: payload.sub };
-	}
+  async validate(payload: JwtPayload): Promise<Pick<User, "userUuid">> {
+    return { userUuid: payload.sub };
+  }
 }

@@ -9,23 +9,25 @@ import { SetModule } from "./modules/set/set.module";
 import { WordController } from "./modules/word/word.controller";
 import { WordService } from "./modules/word/word.service";
 import { WordModule } from "./modules/word/word.module";
+import { ExercisesModule } from "./modules/exercises/exercises.module";
 
 @Module({
-	imports: [
-		UserModule,
-		DynamodbModule,
-		S3storageModule,
-		AuthModule,
-		TokenModule,
-		SetModule,
-		ConfigModule.forRoot({
-			isGlobal: true,
-			envFilePath: ".env"
-		}),
-		SetModule,
-		WordModule
-	],
-	controllers: [WordController],
-	providers: [WordService]
+  imports: [
+    UserModule,
+    DynamodbModule,
+    S3storageModule,
+    AuthModule,
+    TokenModule,
+    SetModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ".env"
+    }),
+    SetModule,
+    WordModule,
+    ExercisesModule
+  ],
+  controllers: [WordController],
+  providers: [WordService]
 })
 export class AppModule {}

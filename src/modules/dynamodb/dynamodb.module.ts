@@ -3,8 +3,8 @@ import { DynamodbService } from "./dynamodb.service";
 import { DynamodbController } from "./dynamodb.controller";
 
 @Module({
-	providers: [DynamodbService],
-	controllers: [DynamodbController],
-	exports: [DynamodbService]
+  providers: [DynamodbService],
+  controllers: [DynamodbController],
+  exports: [DynamodbService]
 })
 export class DynamodbModule {}

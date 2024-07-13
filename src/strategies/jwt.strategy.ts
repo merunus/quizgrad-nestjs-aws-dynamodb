@@ -5,15 +5,15 @@ import { EStrategies } from "../models/strategies";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, EStrategies.JWT) {
-	constructor() {
-		super({
-			jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-			ignoreExpiration: false,
-			secretOrKey: `${process.env.JWT_SECRET}`
-		});
-	}
+  constructor() {
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: `${process.env.JWT_SECRET}`
+    });
+  }
 
-	async validate(payload: JwtPayload): Promise<Pick<User, "userUuid">> {
-		return { userUuid: payload.sub };
-	}
+  async validate(payload: JwtPayload): Promise<Pick<User, "userUuid">> {
+    return { userUuid: payload.sub };
+  }
 }

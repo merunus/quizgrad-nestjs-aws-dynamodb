@@ -3,9 +3,9 @@ import { MULTER_FILE_SIZE_LIMIT } from "../../constants/core.constants";
 import { multerImageFilesFilter } from "./multerImageFilesFilter";
 
 export const multerImageUploadConfig = {
-	storage: multer.memoryStorage(),
-	fileFilter: multerImageFilesFilter,
-	limits: { fileSize: MULTER_FILE_SIZE_LIMIT } // 5mb is limit
+  storage: multer.memoryStorage(),
+  fileFilter: multerImageFilesFilter,
+  limits: { fileSize: MULTER_FILE_SIZE_LIMIT } // 5mb is limit
 } as multer.Options;
 
 // How to get access to the uploaded images

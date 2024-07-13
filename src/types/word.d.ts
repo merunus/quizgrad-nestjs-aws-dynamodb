@@ -1,6 +1,6 @@
 type Word = {
-	translate: string;
-	word: string;
-	wordId: string;
-	imageUrl?: string;
+  translate: string;
+  word: string;
+  wordId: string;
+  imageUrl?: string;
 };

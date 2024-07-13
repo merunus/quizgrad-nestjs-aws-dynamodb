@@ -5,9 +5,9 @@ import { WordService } from "./word.service";
 import { WordController } from "./word.controller";
 
 @Module({
-	imports: [DynamodbModule, S3storageModule],
-	controllers: [WordController],
-	providers: [WordService],
-	exports: [WordService]
+  imports: [DynamodbModule, S3storageModule],
+  controllers: [WordController],
+  providers: [WordService],
+  exports: [WordService]
 })
 export class WordModule {}

@@ -10,26 +10,26 @@ import { RESPONSE_TYPES } from "src/models/responseTypes";
 type ExistingDtoTypes = CreateSetDto | CreateWordDto | UpdateSetDto;
 
 export const parseAndValidateDto = async <T>(
-	dtoJSON: string,
-	dtoType: ClassConstructor<ExistingDtoTypes>
+  dtoJSON: string,
+  dtoType: ClassConstructor<ExistingDtoTypes>
 ): Promise<T> => {
-	try {
-		// Transform stringified DTO JSON into an instance of the DTO class
-		const parsedDto = plainToInstance(dtoType, JSON.parse(dtoJSON));
+  try {
+    // Transform stringified DTO JSON into an instance of the DTO class
+    const parsedDto = plainToInstance(dtoType, JSON.parse(dtoJSON));
 
-		// Validate the transformed DTO
-		const validationOptions: ValidatorOptions = {
-			whitelist: true,
-			forbidNonWhitelisted: true
-		};
-		const errors = await validate(parsedDto, validationOptions);
-		if (errors.length > 0) {
-			const formattedErrors = formatValidationErrors(errors);
-			throwHttpException(RESPONSE_TYPES.BAD_REQUEST, formattedErrors);
-		}
+    // Validate the transformed DTO
+    const validationOptions: ValidatorOptions = {
+      whitelist: true,
+      forbidNonWhitelisted: true
+    };
+    const errors = await validate(parsedDto, validationOptions);
+    if (errors.length > 0) {
+      const formattedErrors = formatValidationErrors(errors);
+      throwHttpException(RESPONSE_TYPES.BAD_REQUEST, formattedErrors);
+    }
 
-		return parsedDto as T;
-	} catch (error) {
-		throwHttpException(RESPONSE_TYPES.BAD_REQUEST, "Invalid JSON format");
-	}
+    return parsedDto as T;
+  } catch (error) {
+    throwHttpException(RESPONSE_TYPES.BAD_REQUEST, "Invalid JSON format");
+  }
 };

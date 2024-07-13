@@ -6,9 +6,9 @@ import { S3storageModule } from "../../modules/s3storage/s3storage.module";
 import { TokenModule } from "../token/token.module";
 
 @Module({
-	imports: [DynamodbModule, S3storageModule, TokenModule],
-	providers: [UserService],
-	controllers: [UserController],
-	exports: [UserService]
+  imports: [DynamodbModule, S3storageModule, TokenModule],
+  providers: [UserService],
+  controllers: [UserController],
+  exports: [UserService]
 })
 export class UserModule {}
