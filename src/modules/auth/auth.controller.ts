@@ -4,11 +4,12 @@ import { LoginDto } from "../../dto/login.dto";
 import { CustomLogger, createLogger } from "src/utils/logger";
 import { GoogleLoginDto } from "src/dto/google-login.dto";
 import { RegisterDto } from "src/dto/register.dto";
+import { ForgotPasswordDto } from "src/dto/forgot-password-dto";
 
 @Controller("auth")
 export class AuthController {
   constructor(private authService: AuthService) {
-    this.logger = createLogger("Auth");
+    this.logger = createLogger("Auth") ;
   }
   private logger: CustomLogger;
 
@@ -25,5 +26,10 @@ export class AuthController {
   @Post("register")
   async register(@Body() registerDto: RegisterDto) {
     return await this.authService.handleRegister(registerDto);
+  }
+
+  @Post("forgot-password")
+  async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+    return await this.authService.handleForgotPassword(forgotPasswordDto);
   }
 }

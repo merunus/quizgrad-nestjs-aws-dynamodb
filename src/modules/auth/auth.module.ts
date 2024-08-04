@@ -7,9 +7,10 @@ import { TokenModule } from "../token/token.module";
 import { JwtModule } from "@nestjs/jwt";
 import { JwtStrategy } from "../../strategies/jwt.strategy";
 import { DynamodbModule } from "../dynamodb/dynamodb.module";
+import { SimpleEmailModule } from "../ses/ses.module";
 
 @Module({
-  imports: [UserModule, PassportModule, DynamodbModule, TokenModule],
+  imports: [UserModule, PassportModule, DynamodbModule, TokenModule, SimpleEmailModule],
   providers: [AuthService, JwtStrategy, JwtModule],
   controllers: [AuthController],
   exports: [AuthService]

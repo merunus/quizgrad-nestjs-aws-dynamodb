@@ -10,6 +10,7 @@ import { WordController } from "./modules/word/word.controller";
 import { WordService } from "./modules/word/word.service";
 import { WordModule } from "./modules/word/word.module";
 import { ExercisesModule } from "./modules/exercises/exercises.module";
+import { SimpleEmailModule } from "./modules/ses/ses.module";
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { ExercisesModule } from "./modules/exercises/exercises.module";
     }),
     SetModule,
     WordModule,
-    ExercisesModule
+    ExercisesModule,
+    SimpleEmailModule,
   ],
   controllers: [WordController],
   providers: [WordService]

@@ -12,3 +12,9 @@ SK: SET#<SetId>
 Word element (belonging to sets):
 PK: SET#<SetId> (to group words by their set)
 SK: WORD#<WordId>
+
+Reset token element:
+PK: `USER#${user.userUuid}`,
+SK: `RESET#${resetToken}`,
+email,
+expiry: resetTokenExpiry

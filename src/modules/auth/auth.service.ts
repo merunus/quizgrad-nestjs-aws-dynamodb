@@ -14,13 +14,18 @@ import { LoginDto } from "src/dto/login.dto";
 import { hashPassword } from "src/utils/hashPassword";
 import { PutCommandInput } from "@aws-sdk/lib-dynamodb";
 import { DynamodbService } from "../dynamodb/dynamodb.service";
+import { ForgotPasswordDto } from "src/dto/forgot-password-dto";
+import * as crypto from "crypto";
+import { SimpleEmailService } from "../ses/ses.service";
+import { getForgotPasswordHTMLTemplate } from "../ses/templates/forgot-password-email-template";
 
 @Injectable()
 export class AuthService {
   constructor(
     private userService: UserService,
     private dynamodbService: DynamodbService,
-    private tokenService: TokenService
+    private tokenService: TokenService,
+    private sesService: SimpleEmailService
   ) {}
 
   generateTokens(userUuid: string) {
@@ -140,5 +145,42 @@ export class AuthService {
         `Failed to create user`
       );
     }
+  }
+
+  async handleForgotPassword({ email }: ForgotPasswordDto) {
+    const user = await this.userService.handleGetUserByEmail(email);
+    if (!user) {
+      throwHttpException(RESPONSE_TYPES.BAD_REQUEST, `User with email ${email} doesn't exist`);
+    }
+
+    if (isGoogleUser(user)) {
+      throwHttpException(RESPONSE_TYPES.CONFLICT, `User was created with google authentication`);
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+
+    const resetTokenItem: TResetTokenTableElement = {
+      PK: `USER#${user.userUuid}`,
+      SK: `RESET#${resetToken}`,
+      email,
+      ttl: resetTokenExpiry
+    };
+
+    const commandInput: PutCommandInput = {
+      TableName: process.env.DYNAMODB_TABLE_NAME,
+      Item: resetTokenItem
+    };
+
+    await this.dynamodbService.sendPutCommand(commandInput);
+
+    //! TODO add url to env variable in future
+    const resetLink = `https://quizgrad-nextjs.vercel.app/en/reset-password?token=${resetToken}`;
+
+    const emailHTMLBody = getForgotPasswordHTMLTemplate(resetLink);
+
+    await this.sesService.sendEmailToUser(user.email, "Reset password link", emailHTMLBody);
+
+    return { message: `Link was sent on email ${user.email}` };
   }
 }
