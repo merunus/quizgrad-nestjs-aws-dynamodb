@@ -1,0 +1,126 @@
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import {
+  BatchWriteCommand,
+  BatchWriteCommandInput,
+  DeleteCommand,
+  DeleteCommandInput,
+  DynamoDBDocumentClient,
+  GetCommand,
+  GetCommandInput,
+  PutCommand,
+  PutCommandInput,
+  QueryCommand,
+  QueryCommandInput,
+  ScanCommand,
+  ScanCommandInput,
+  UpdateCommand,
+  UpdateCommandInput
+} from "@aws-sdk/lib-dynamodb";
+import { Injectable } from "@nestjs/common";
+import { throwHttpException } from "src/utils/throwHttpException";
+import { RESPONSE_TYPES } from "../../models/responseTypes";
+
+@Injectable()
+export class DynamodbService {
+  // DynamoDBDocumentClient is a higher-level client that simplifies working with DynamoDB items by abstracting away the complexity of the underlying DynamoDB data types.
+  private dynamoDbClient: DynamoDBDocumentClient;
+
+  constructor() {
+    const client = new DynamoDBClient({
+      region: process.env.AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      }
+    });
+    // This client simplifies working with DynamoDB by allowing work directly with js objects.
+    this.dynamoDbClient = DynamoDBDocumentClient.from(client);
+  }
+
+  getDynamoDbClient(): DynamoDBDocumentClient {
+    return this.dynamoDbClient;
+  }
+
+  async sendGetCommand(commandInput: GetCommandInput) {
+    try {
+      const { Item } = await this.dynamoDbClient.send(new GetCommand(commandInput));
+      return Item;
+    } catch (error) {
+      throwHttpException(
+        error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+        `Failed to put element to the dynamodb table: ${error}`
+      );
+    }
+  }
+
+  async sendPutCommand(commandInput: PutCommandInput) {
+    try {
+      await this.dynamoDbClient.send(new PutCommand(commandInput));
+    } catch (error) {
+      throwHttpException(
+        error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+        `Failed to put element to the dynamodb table: ${error}`
+      );
+    }
+  }
+
+  async sendUpdateCommand(commandInput: UpdateCommandInput) {
+    try {
+      const { Attributes } = await this.dynamoDbClient.send(new UpdateCommand(commandInput));
+      return Attributes;
+    } catch (error) {
+      throwHttpException(
+        error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+        `Failed to update element to the dynamodb table: ${error}`
+      );
+    }
+  }
+
+  async sendDeleteCommand(commandInput: DeleteCommandInput) {
+    try {
+      const response = await this.dynamoDbClient.send(new DeleteCommand(commandInput));
+      return response;
+    } catch (error) {
+      throwHttpException(
+        error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+        `Failed to delete item from database table: ${error}`
+      );
+    }
+  }
+
+  async sendQueryCommand<T>(commandInput: QueryCommandInput): Promise<T> {
+    try {
+      const { Items } = await this.dynamoDbClient.send(new QueryCommand(commandInput));
+      return Items as T;
+    } catch (error) {
+      throwHttpException(
+        error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+        `Failed to query item from database table: ${error}`
+      );
+    }
+  }
+
+  async sendScanCommand<T>(commandInput: ScanCommandInput): Promise<T> {
+    try {
+      const { Items } = await this.dynamoDbClient.send(new ScanCommand(commandInput));
+      return Items as T;
+    } catch (error) {
+      throwHttpException(
+        error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+        `Failed to scan database table: ${error}`
+      );
+    }
+  }
+
+  async sendBatchWriteCommand(commandInput: BatchWriteCommandInput) {
+    try {
+      const response = await this.dynamoDbClient.send(new BatchWriteCommand(commandInput));
+      return response;
+    } catch (error) {
+      throwHttpException(
+        error?.response?.status || RESPONSE_TYPES.SERVER_ERROR,
+        "Failed during batch write operation"
+      );
+    }
+  }
+}
